@@ -186,7 +186,8 @@ Ninguna de las tres fuentes debe quedar desincronizada respecto a las otras.
 
 | Fase | Estado | Descripción |
 |------|--------|-------------|
-| 1 | ✅ **Actual** | BD relacional, API REST, vistas dinámicas |
-| 2 | 🔜 | Text-to-Speech (Web Speech API / OpenAI TTS) |
-| 3 | 🔜 | MediaRecorder + Whisper STT |
-| 4 | 🔜 | Azure Speech Assessment + GPT-4o-mini |
+| 1 | ✅ **Completada** | BD relacional MySQL, API REST FastAPI, vistas dinámicas Angular A1–C2 |
+| 2 | 🚧 **En curso** | **Text-to-Speech — La App Habla:** Web Speech API nativa del navegador para escuchar la pronunciación exacta de frases, vocabulario y fonemas sin APIs de pago externas |
+| 3 | 🔜 | **Speech Recognition — La App Escucha:** Captura de audio (micrófono) para que el estudiante lea las frases y el sistema valide si la pronunciación es correcta |
+| 4 | 🔜 | **El Cerebro IA (Oracle OCI + Ollama/Gemma):** Conexión del backend con servidor en la nube para generar prácticas dinámicas, simular entrevistas de trabajo (Roleplay) y dar feedback gramatical en tiempo real |
+| 5 | 🔜 | **Gamificación y Métricas:** Time Tracker de estudio, rachas (streaks), puntos de experiencia (XP) y dashboards de progreso |
