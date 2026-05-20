@@ -58,10 +58,11 @@ export class SpeechService implements OnDestroy {
     // Cancel any ongoing speech before starting a new utterance.
     this._synth.cancel();
 
+    const intonation = this._detectIntonation(text);
     const utterance = new SpeechSynthesisUtterance(this._sanitizeForSpeech(text));
     utterance.lang = 'en-US';
-    utterance.rate = 0.9;   // Slightly slower for learning context
-    utterance.pitch = 1.0;
+    utterance.rate = intonation.rate;
+    utterance.pitch = intonation.pitch;
 
     if (this._voice) {
       utterance.voice = this._voice;
@@ -86,7 +87,33 @@ export class SpeechService implements OnDestroy {
   // ─── Private helpers ──────────────────────────────────────────────────────
 
   /**
-   * Removes prosodic and phonetic annotation symbols that the browser
+   * Detects prosodic intonation markers in the raw phrase text and returns
+   * rough pitch/rate approximations for the Web Speech API.
+   *
+   * NOTE: This is NOT real intonation control — the browser TTS engine does
+   * not support SSML pitch contours. These values give an audible hint so
+   * learners can distinguish falling vs. rising phrases. True prosody control
+   * is planned for Phase 4 (server-side TTS with SSML support).
+   *
+   * | Marker | Pattern        | Adjustment                        |
+   * |--------|----------------|-----------------------------------|
+   * | ↘      | Falling        | pitch=0.80, rate=0.85 (lower/slow)|
+   * | ↗      | Rising         | pitch=1.30, rate=0.90 (higher)    |
+   * | ↘↗     | Fall-rise      | pitch=1.10, rate=0.80 (reserved)  |
+   * | none   | Neutral        | pitch=1.00, rate=0.90             |
+   */
+  private _detectIntonation(text: string): { pitch: number; rate: number } {
+    const hasFallRise = /↘↗/.test(text);
+    const hasFall     = /↘/.test(text) && !hasFallRise;
+    const hasRise     = /↗/.test(text) && !hasFallRise;
+
+    if (hasFallRise) return { pitch: 1.1, rate: 0.80 };
+    if (hasFall)     return { pitch: 0.8, rate: 0.85 };
+    if (hasRise)     return { pitch: 1.3, rate: 0.90 };
+    return             { pitch: 1.0, rate: 0.90 };
+  }
+
+  /**
    * speech engine would mispronounce (e.g. ↘ → "down right arrow").
    *
    * Strips:

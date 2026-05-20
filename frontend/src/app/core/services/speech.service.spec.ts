@@ -109,7 +109,39 @@ describe('SpeechService', () => {
     expect(utterance.text).toBe("I didn't say THE deploy was ready.");
   });
 
-  it('should not throw if speak is called while unsupported', () => {
+  // ─── Intonation approximation (pitch/rate) ──────────────────────────────
+
+  it('should apply low pitch for falling tone (↘)', () => {
+    service.speak("The deploy is READY. ↘");
+    const utterance: SpeechSynthesisUtterance =
+      (mockSpeechSynthesis.speak as jasmine.Spy).calls.mostRecent().args[0];
+    expect(utterance.pitch).toBeLessThan(1.0);
+  });
+
+  it('should apply high pitch for rising tone (↗)', () => {
+    service.speak("Is the deploy ready? ↗");
+    const utterance: SpeechSynthesisUtterance =
+      (mockSpeechSynthesis.speak as jasmine.Spy).calls.mostRecent().args[0];
+    expect(utterance.pitch).toBeGreaterThan(1.0);
+  });
+
+  it('should apply mid-high pitch for fall-rise tone (↘↗)', () => {
+    service.speak("I didn't SAY the deploy was ready. ↘↗");
+    const utterance: SpeechSynthesisUtterance =
+      (mockSpeechSynthesis.speak as jasmine.Spy).calls.mostRecent().args[0];
+    // Fall-rise is between neutral and high — pitch = 1.1
+    expect(utterance.pitch).toBeGreaterThan(1.0);
+    expect(utterance.pitch).toBeLessThan(1.3);
+  });
+
+  it('should apply neutral pitch for phrases without intonation markers', () => {
+    service.speak("She works every day.");
+    const utterance: SpeechSynthesisUtterance =
+      (mockSpeechSynthesis.speak as jasmine.Spy).calls.mostRecent().args[0];
+    expect(utterance.pitch).toBe(1.0);
+  });
+
+  it('should handle speak() gracefully when speechSynthesis is unavailable', () => {
     let unsupportedService!: SpeechService;
     TestBed.runInInjectionContext(() => {
       Object.defineProperty(window, 'speechSynthesis', {
