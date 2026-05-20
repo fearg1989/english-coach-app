@@ -58,7 +58,7 @@ export class SpeechService implements OnDestroy {
     // Cancel any ongoing speech before starting a new utterance.
     this._synth.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text.trim());
+    const utterance = new SpeechSynthesisUtterance(this._sanitizeForSpeech(text));
     utterance.lang = 'en-US';
     utterance.rate = 0.9;   // Slightly slower for learning context
     utterance.pitch = 1.0;
@@ -66,7 +66,6 @@ export class SpeechService implements OnDestroy {
     if (this._voice) {
       utterance.voice = this._voice;
     }
-
     utterance.onstart = () => this.isSpeaking.set(true);
     utterance.onend = () => this.isSpeaking.set(false);
     utterance.onerror = () => this.isSpeaking.set(false);
@@ -85,6 +84,29 @@ export class SpeechService implements OnDestroy {
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────
+
+  /**
+   * Removes prosodic and phonetic annotation symbols that the browser
+   * speech engine would mispronounce (e.g. ↘ → "down right arrow").
+   *
+   * Strips:
+   *  - Unicode directional/arrow characters (intonation markers: ↘ ↗ → ← ↑ ↓ etc.)
+   *  - IPA stress/length diacritics that may leak into phrase text (ˈ ˌ ː)
+   *  - Trailing punctuation left orphaned after stripping
+   *  - Extra whitespace
+   */
+  private _sanitizeForSpeech(text: string): string {
+    return text
+      // Unicode arrows (intonation markers): U+2190–U+21FF block
+      .replace(/[\u2190-\u21FF]/g, '')
+      // IPA diacritics that can appear in annotated phrases
+      .replace(/[ˈˌː]/g, '')
+      // Clean up orphaned trailing punctuation (e.g. ". ↘" → ".")
+      .replace(/\s+([.,;])/g, '$1')
+      // Collapse multiple spaces into one
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
 
   /**
    * Resolves the best available English voice using the priority order:

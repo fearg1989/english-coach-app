@@ -4,7 +4,6 @@ import { SpeechService } from './speech.service';
 describe('SpeechService', () => {
   let service: SpeechService;
   let mockSpeechSynthesis: jasmine.SpyObj<SpeechSynthesis>;
-  let mockUtterance: jasmine.SpyObj<SpeechSynthesisUtterance>;
 
   beforeEach(() => {
     mockSpeechSynthesis = jasmine.createSpyObj<SpeechSynthesis>(
@@ -88,7 +87,29 @@ describe('SpeechService', () => {
     expect(service.isSpeaking()).toBeFalse();
   });
 
-  it('should not throw when speak() is called in unsupported browser', () => {
+  it('should strip intonation arrow symbols before speaking', () => {
+    service.speak("I didn't say the deploy was READY. ↘");
+    const utterance: SpeechSynthesisUtterance =
+      (mockSpeechSynthesis.speak as jasmine.Spy).calls.mostRecent().args[0];
+    expect(utterance.text).not.toContain('↘');
+    expect(utterance.text).toBe("I didn't say the deploy was READY.");
+  });
+
+  it('should strip fall-rise intonation markers (↘↗) before speaking', () => {
+    service.speak("I didn't SAY the deploy was ready. ↘↗");
+    const utterance: SpeechSynthesisUtterance =
+      (mockSpeechSynthesis.speak as jasmine.Spy).calls.mostRecent().args[0];
+    expect(utterance.text).toBe("I didn't SAY the deploy was ready.");
+  });
+
+  it('should strip rise intonation marker (↗) before speaking', () => {
+    service.speak("I didn't say THE deploy was ready. ↗");
+    const utterance: SpeechSynthesisUtterance =
+      (mockSpeechSynthesis.speak as jasmine.Spy).calls.mostRecent().args[0];
+    expect(utterance.text).toBe("I didn't say THE deploy was ready.");
+  });
+
+  it('should not throw if speak is called while unsupported', () => {
     let unsupportedService!: SpeechService;
     TestBed.runInInjectionContext(() => {
       Object.defineProperty(window, 'speechSynthesis', {
