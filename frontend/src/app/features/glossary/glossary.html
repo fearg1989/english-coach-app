@@ -1,0 +1,116 @@
+<section class="glossary-page">
+
+  <!-- Encabezado y breadcrumb -->
+  <header class="glossary-page__header">
+    <a routerLink="/" [queryParams]="{ view: from() || 'levels' }" class="breadcrumb">← Inicio</a>
+    <div class="glossary-page__title-row">
+      <span class="glossary-page__icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+          class="w-8 h-8">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+        </svg>
+      </span>
+      <div>
+        <h1 class="glossary-page__title">Glosario de Referencia</h1>
+        <p class="glossary-page__subtitle">Consulta rápida de phrasal verbs y verbos irregulares.</p>
+      </div>
+    </div>
+
+    <!-- Tabs (unificados con el menú principal) -->
+    <div class="glossary-page__tabs" role="tablist">
+      <button
+        role="tab"
+        class="glossary-tab"
+        [class.glossary-tab--active]="activeTab() === 'phrasal_verb'"
+        (click)="setTab('phrasal_verb')"
+        aria-controls="panel-phrasal"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+          class="w-4 h-4 transition-colors">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+        </svg>
+        <span>Phrasal Verbs</span>
+      </button>
+      <button
+        role="tab"
+        class="glossary-tab"
+        [class.glossary-tab--active]="activeTab() === 'irregular_verb'"
+        (click)="setTab('irregular_verb')"
+        aria-controls="panel-irregular"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+          class="w-4 h-4 transition-colors">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+        </svg>
+        <span>Irregular Verbs</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Error global -->
+  @if (error()) {
+  <p class="glossary-page__error">{{ error() }}</p>
+  }
+
+  <!-- Panel: Phrasal Verbs -->
+  @if (activeTab() === 'phrasal_verb') {
+  <div id="panel-phrasal" role="tabpanel">
+    @if (isLoading()) {
+    <p class="glossary-page__loading">Cargando phrasal verbs…</p>
+    } @else {
+    <div class="phrasal-grid">
+      @for (entry of phrasalVerbs(); track entry.id) {
+      <div class="phrasal-card">
+        <div class="phrasal-card__term">{{ entry.term }}</div>
+        <div class="phrasal-card__meaning">{{ entry.meaning }}</div>
+      </div>
+      }
+      @empty {
+      <p class="glossary-page__empty">No hay phrasal verbs disponibles.</p>
+      }
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Panel: Verbos Irregulares -->
+  @if (activeTab() === 'irregular_verb') {
+  <div id="panel-irregular" role="tabpanel">
+    @if (isLoading()) {
+    <p class="glossary-page__loading">Cargando verbos irregulares…</p>
+    } @else {
+    <div class="irregular-table-wrapper">
+      <table class="irregular-table">
+        <thead>
+          <tr>
+            <th>Base Form</th>
+            <th>Past Simple</th>
+            <th>Past Participle</th>
+            <th>Significado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of irregularVerbs(); track entry.id) {
+          <tr>
+            <td class="irregular-table__base">{{ entry.term }}</td>
+            <td>{{ entry.form_past }}</td>
+            <td>{{ entry.form_participle }}</td>
+            <td class="irregular-table__meaning">{{ entry.meaning }}</td>
+          </tr>
+          }
+          @empty {
+          <tr>
+            <td colspan="4" class="glossary-page__empty">No hay verbos disponibles.</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+  </div>
+  }
+
+</section>

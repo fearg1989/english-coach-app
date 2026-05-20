@@ -1,0 +1,293 @@
+// ─── Lesson Page Layout ────────────────────────────────────────────────────────
+.lesson-page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+
+  &__header {
+    margin-bottom: 2.5rem;
+
+    .badge {
+      display: inline-block;
+      margin-bottom: 0.75rem;
+    }
+  }
+
+  &__title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0.5rem 0 1rem;
+    line-height: 1.3;
+    color: var(--color-text-primary);
+  }
+
+  &__description {
+    display: grid;
+    gap: 0.6rem;
+    color: var(--color-text-secondary);
+    font-size: 0.97rem;
+    line-height: 1.75;
+    margin-bottom: 1.25rem;
+  }
+}
+
+// ─── Grammar Structure Panel ───────────────────────────────────────────────────
+.grammar-structure {
+  margin-top: 1.5rem;
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.1);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.85rem 1.25rem;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  }
+
+  &__icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    flex-shrink: 0;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__title {
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    color: #94a3b8;
+  }
+
+  &__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: #1a2233;
+  }
+}
+
+// ─── Structure Rows ────────────────────────────────────────────────────────────
+.struct-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  transition: background 0.15s ease;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  // ── Badge (the symbol circle) ─────────────────────────────────────────────
+  &__badge {
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    margin-top: 0.1rem;
+
+    svg {
+      width: 1.1rem;
+      height: 1.1rem;
+    }
+  }
+
+  // ── Content ──────────────────────────────────────────────────────────────
+  &__content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  &__label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.7;
+  }
+
+  &__formula {
+    font-family: 'Courier New', Courier, Monaco, monospace;
+    font-size: 0.95rem;
+    color: #e2e8f0;
+    line-height: 1.5;
+    word-break: break-word;
+
+    &--plain {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 0.9rem;
+      color: #94a3b8;
+      word-break: break-word;
+    }
+  }
+
+  // ── Affirmative (+) ───────────────────────────────────────────────────────
+  &--affirmative {
+    border-left: 3px solid #22c55e;
+
+    .struct-row__badge {
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+      border: 1.5px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .struct-row__label {
+      color: #4ade80;
+    }
+  }
+
+  // ── Negative (-) ─────────────────────────────────────────────────────────
+  &--negative {
+    border-left: 3px solid #ef4444;
+
+    .struct-row__badge {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1.5px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .struct-row__label {
+      color: #f87171;
+    }
+  }
+
+  // ── Interrogative (?) ─────────────────────────────────────────────────────
+  &--interrogative {
+    border-left: 3px solid #818cf8;
+
+    .struct-row__badge {
+      background: rgba(129, 140, 248, 0.15);
+      color: #a5b4fc;
+      border: 1.5px solid rgba(129, 140, 248, 0.3);
+    }
+
+    .struct-row__label {
+      color: #a5b4fc;
+    }
+  }
+
+  // ── Key Tip ───────────────────────────────────────────────────────────────
+  &--tip {
+    border-left: 3px solid #fbbf24;
+
+    .struct-row__badge {
+      background: rgba(251, 191, 36, 0.12);
+      border: 1.5px solid rgba(251, 191, 36, 0.25);
+    }
+
+    .struct-row__label {
+      color: #fbbf24;
+    }
+  }
+
+  // ── Info (verb forms) ─────────────────────────────────────────────────────
+  &--info {
+    border-left: 3px solid #38bdf8;
+
+    .struct-row__badge {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1.5px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .struct-row__label {
+      color: #38bdf8;
+    }
+  }
+
+  // ── Pattern (advanced inversion) ──────────────────────────────────────────
+  &--pattern {
+    border-left: 3px solid #c084fc;
+
+    .struct-row__badge {
+      background: rgba(192, 132, 252, 0.12);
+      border: 1.5px solid rgba(192, 132, 252, 0.25);
+    }
+
+    .struct-row__label {
+      color: #c084fc;
+    }
+  }
+}
+
+// ─── Lesson Sections (Examples / Exercises) ────────────────────────────────────
+.lesson-section {
+  margin-bottom: 3rem;
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--color-border);
+    color: var(--color-text-primary);
+
+    svg {
+      width: 1.25rem;  // w-5 (20px)
+      height: 1.25rem; // h-5 (20px)
+      color: var(--color-primary);
+      flex-shrink: 0;
+    }
+  }
+
+  &__subtitle {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin-bottom: 1.25rem;
+    line-height: 1.6;
+  }
+}
+
+.examples-list,
+.exercises-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+// ─── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 640px) {
+  .lesson-page {
+    padding: 1.5rem 1rem 3rem;
+
+    &__title {
+      font-size: 1.4rem;
+    }
+  }
+
+  .struct-row {
+    padding: 0.85rem 1rem;
+    gap: 0.75rem;
+
+    &__formula {
+      font-size: 0.88rem;
+    }
+  }
+}

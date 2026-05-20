@@ -1,0 +1,250 @@
+// ── Glossary Page ─────────────────────────────────────────────────────────────
+
+.glossary-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+.breadcrumb {
+  display: inline-block;
+  margin-bottom: 1.25rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  text-decoration: none;
+  align-self: flex-start; // Keeps back link aligned to the top-left
+
+  &:hover { color: #4f46e5; }
+}
+
+.glossary-page__header {
+  margin-bottom: 3rem; // Exact same margin bottom as home__header for content separation
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.glossary-page__title-row {
+  display: flex;
+  flex-direction: column; // Stack elements vertically
+  align-items: center;
+  text-align: center;
+  gap: 0.75rem;
+}
+
+.glossary-page__icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
+  margin-inline: auto;
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.glossary-page__title {
+  margin: 0 0 0.5rem;
+  font-size: 2.25rem; // Premium bold size
+  font-weight: 800;   // Cohesive weight match
+  color: var(--color-text-primary);
+}
+
+.glossary-page__subtitle {
+  margin: 0;
+  font-size: 1.05rem; // Sleek and legible subtitle
+  color: var(--color-text-secondary);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+
+.glossary-page__tabs {
+  display: inline-flex;
+  gap: 0.5rem;
+  margin-top: 2rem; // Perfect space within the header container
+  flex-wrap: wrap;
+  justify-content: center;
+  background: rgba(226, 232, 240, 0.4); // exact same background
+  padding: 0.375rem;
+  border-radius: 14px; // matches main menu
+  border: 1px solid var(--color-border); // exact same border
+
+  @media (max-width: 520px) {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 12px;
+  }
+}
+
+.glossary-tab {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  padding: 0.625rem 1.25rem; // py-2.5 px-5
+  border-radius: 10px;       // rounded-lg to match main menu exactly
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  font-weight: 600;          // font-semibold
+  font-size: 0.875rem;       // text-sm
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;               // gap-2 to match main menu
+  margin-bottom: 0;
+  white-space: nowrap;       // whitespace-nowrap to prevent text wrapping
+
+  svg {
+    transition: color 0.2s ease-in-out;
+  }
+
+  &:hover {
+    color: var(--color-primary);
+    background: rgba(79, 70, 229, 0.05);
+  }
+
+  &--active {
+    background: var(--color-primary) !important; // exact brand active background
+    border-color: var(--color-primary) !important;
+    color: #ffffff !important;                  // high contrast white text
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+
+    svg {
+      color: #ffffff !important;
+    }
+  }
+
+  @media (max-width: 520px) {
+    flex: 1;
+    justify-content: center;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.78rem;
+    border-radius: 8px;
+    gap: 0.25rem;
+
+    svg {
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+}
+
+// ── States ────────────────────────────────────────────────────────────────────
+
+.glossary-page__loading,
+.glossary-page__empty,
+.glossary-page__error {
+  text-align: center;
+  padding: 2rem;
+  color: #9ca3af;
+  font-size: 0.95rem;
+}
+
+.glossary-page__error {
+  color: #ef4444;
+}
+
+// ── Phrasal Verbs: grid & cards ─────────────────────────────────────────────
+
+.phrasal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.phrasal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border-color: #c7d2fe;
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+  }
+}
+
+.phrasal-card__term {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e1b4b;
+}
+
+.phrasal-card__meaning {
+  font-size: 0.95rem;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+// ── Irregular Verbs: table ────────────────────────────────────────────────────
+
+.irregular-table-wrapper {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0 0 0 / 0.05);
+}
+
+.irregular-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+
+  thead {
+    background: #f8fafc;
+
+    th {
+      padding: 1rem 1.25rem;
+      text-align: left;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #475569;
+      border-bottom: 2px solid #e2e8f0;
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s;
+
+      &:last-child { border-bottom: none; }
+      &:hover { background: #f8fafc; }
+    }
+
+    td {
+      padding: 0.85rem 1.25rem;
+      color: #334155;
+    }
+  }
+
+  &__base {
+    font-weight: 700;
+    color: #4338ca !important;
+  }
+
+  &__meaning {
+    color: #64748b !important;
+    font-style: italic;
+  }
+}

@@ -1,0 +1,196 @@
+.level-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+
+  &__header {
+    margin-bottom: 2rem;
+  }
+
+  &__title-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0.75rem 0;
+
+    h1 { font-size: 1.9rem; }
+  }
+
+  &__description {
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+  }
+}
+
+.filter-tabs {
+  display: inline-flex;
+  gap: 0.5rem;
+  background: rgba(226, 232, 240, 0.4);
+  padding: 0.375rem;
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.filter-tab {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  padding: 0.625rem 1.25rem; // py-2.5 px-5
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &:hover {
+    color: var(--color-primary);
+    background: rgba(79, 70, 229, 0.05);
+  }
+
+  &.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+  }
+}
+
+.empty-state {
+  padding: 2.5rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.lessons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.lesson-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+
+  &:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+
+    .lesson-card__cta {
+      transform: translateX(4px);
+    }
+  }
+
+  &__badge-wrapper {
+    flex-shrink: 0;
+  }
+
+  &__badge {
+    width: 3.25rem;
+    height: 3.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    padding: 0.75rem;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    &--phonetics {
+      background: rgba(245, 158, 11, 0.1);
+      color: #d97706;
+    }
+
+    &--grammar {
+      background: rgba(79, 70, 229, 0.1);
+      color: var(--color-primary);
+    }
+  }
+
+  &__main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  &__tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    line-height: 1.2;
+    align-self: flex-start;
+
+    &--phonetics {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    &--grammar {
+      background: #e0e7ff;
+      color: #1e40af;
+    }
+  }
+
+  &__title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0;
+  }
+
+  &__description {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  &__cta {
+    color: var(--color-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-top: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    transition: transform var(--transition);
+  }
+}
+
+@media (max-width: 500px) {
+  .lesson-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+
+    &__badge {
+      width: 2.75rem;
+      height: 2.75rem;
+      padding: 0.6rem;
+    }
+  }
+}

@@ -1,0 +1,155 @@
+<section class="lesson-page">
+
+  @if (isLoading()) {
+    <div class="state state--loading">
+      <span class="spinner"></span>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="state state--error">
+      <p>{{ error() }}</p>
+    </div>
+  }
+
+  @if (!isLoading() && lesson()) {
+    <header class="lesson-page__header">
+      @if (from() === 'specialized' && fromTopicId()) {
+        <a [routerLink]="['/specialized', fromTopicId()]" class="breadcrumb">
+          ← Volver al tema
+        </a>
+      } @else {
+        <a [routerLink]="['/level', lesson()!.level_id]" class="breadcrumb">
+          ← Back to level
+        </a>
+      }
+      <span class="badge badge--{{ lesson()!.type }}">
+        @if (lesson()!.type === 'phonetics') {
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" /></svg>
+          <span>Phonetics</span>
+        } @else {
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" /></svg>
+          <span>Grammar</span>
+        }
+      </span>
+      <h1 class="lesson-page__title">{{ lesson()!.title }}</h1>
+
+      @if (lesson()!.description) {
+
+        <!-- Plain explanatory text -->
+        @if (textBlocks().length > 0) {
+          <div class="lesson-page__description">
+            @for (block of textBlocks(); track block) {
+              <p>{{ block }}</p>
+            }
+          </div>
+        }
+
+        <!-- Grammar Structure Panel -->
+        @if (structureRows().length > 0) {
+          <aside class="grammar-structure" aria-label="Grammar structure">
+            <header class="grammar-structure__header">
+              <span class="grammar-structure__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m9 9 6-6m0 0 6 6m-6-6v12m0 0-3-3m3 3 3-3" /></svg>
+              </span>
+              <span class="grammar-structure__title">Grammar Structure</span>
+            </header>
+
+            <div class="grammar-structure__rows">
+              @for (row of structureRows(); track row.label) {
+
+                @if (row.type === '+' || row.type === '-' || row.type === '?') {
+                  <!-- Affirmative / Negative / Interrogative -->
+                  <div class="struct-row struct-row--{{ row.type === '+' ? 'affirmative' : row.type === '-' ? 'negative' : 'interrogative' }}">
+                    <span class="struct-row__badge" aria-hidden="true">{{ row.type }}</span>
+                    <div class="struct-row__content">
+                      <span class="struct-row__label">{{ row.label }}</span>
+                      <code class="struct-row__formula">{{ row.formula }}</code>
+                    </div>
+                  </div>
+                }
+
+                @if (row.type === 'tip') {
+                  <!-- Key notes / adverbs / markers -->
+                  <div class="struct-row struct-row--tip">
+                    <span class="struct-row__badge" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-3H9.75a.75.75 0 0 1-.75-.75V12a3.75 3.75 0 1 1 7.5 0v2.25a.75.75 0 0 1-.75.75H14v3M9.75 21h4.5" /></svg>
+                    </span>
+                    <div class="struct-row__content">
+                      <span class="struct-row__label">{{ row.label }}</span>
+                      <p class="struct-row__formula struct-row__formula--plain">{{ row.formula }}</p>
+                    </div>
+                  </div>
+                }
+
+                @if (row.type === 'info') {
+                  <!-- Verb form reference -->
+                  <div class="struct-row struct-row--info">
+                    <span class="struct-row__badge" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z" /></svg>
+                    </span>
+                    <div class="struct-row__content">
+                      <span class="struct-row__label">{{ row.label }}</span>
+                      <p class="struct-row__formula struct-row__formula--plain">{{ row.formula }}</p>
+                    </div>
+                  </div>
+                }
+
+                @if (row.type === 'pattern') {
+                  <!-- Inversion / advanced pattern -->
+                  <div class="struct-row struct-row--pattern">
+                    <span class="struct-row__badge" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                    </span>
+                    <div class="struct-row__content">
+                      <span class="struct-row__label">{{ row.label }}</span>
+                      <code class="struct-row__formula">{{ row.formula }}</code>
+                    </div>
+                  </div>
+                }
+
+              }
+            </div>
+          </aside>
+        }
+      }
+    </header>
+
+    <!-- Examples Section -->
+    @if (lesson()!.examples.length > 0) {
+      <div class="lesson-section">
+        <h2 class="lesson-section__title">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+          Examples
+        </h2>
+        <p class="lesson-section__subtitle">
+          Study each example — note the sentence structure and how the tense is applied.
+        </p>
+        <div class="examples-list">
+          @for (example of lesson()!.examples; track example.id) {
+            <app-example-card [example]="example" />
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Exercises Section -->
+    @if (lesson()!.exercises.length > 0) {
+      <div class="lesson-section">
+        <h2 class="lesson-section__title">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364-.707.707M6.343 17.657l-.707.707m0-12.728.707.707m11.314 11.314-.707.707M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14Zm0 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z" /></svg>
+          Practice Exercises
+        </h2>
+        <p class="lesson-section__subtitle">
+          Test your understanding of the grammar structure with these exercises.
+        </p>
+        <div class="exercises-list">
+          @for (exercise of lesson()!.exercises; track exercise.id) {
+            <app-exercise-card [exercise]="exercise" />
+          }
+        </div>
+      </div>
+    }
+  }
+
+</section>
