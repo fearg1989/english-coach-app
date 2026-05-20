@@ -93,3 +93,15 @@ Para integrar generación autónoma de contenido en local o llamadas remotas de 
 
 ---
 *Este documento es obligatorio para todo desarrollador e IA trabajando en el proyecto english-coach-app.*
+
+---
+
+## 4. Technical Debt Register
+
+Las decisiones de arquitectura con compromisos deliberados o workarounds activos están documentadas en:
+
+**[`docs/tech_debt.md`](./tech_debt.md)**
+
+| ID | Feature | Workaround activo | Resolución |
+|---|---|---|---|
+| TD-001 | Advanced Prosody TTS — SSML | `pitch`/`rate` global en Web Speech API | Phase 4 — Azure/Google Cloud TTS con SSML |
