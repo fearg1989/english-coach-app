@@ -13,10 +13,11 @@ Never suggest or perform merges into the `main` branch without explicitly explai
 
 This project is an MVP of a custom web platform for English learning (A1-C2) and applied phonetics, designed to improve fluency and technical communication through AI. Development is planned incrementally across 4 phases:
 
-- **Phase 1 (Current):** Full-Stack base architecture. Relational database (MySQL) to store proficiency levels, lessons, examples with IPA transcriptions, and exercises. Dynamic UI with scalable routing.
-- **Phase 2 (Future):** Integration of Text-to-Speech (Web Speech API / OpenAI TTS) to listen to English examples interactively.
+- **Phase 1 (Completed):** Full-Stack base architecture. Relational database (MySQL) to store proficiency levels, lessons, examples with IPA transcriptions, and exercises. Dynamic UI with scalable routing.
+- **Phase 2 (Current):** Integration of Text-to-Speech (Web Speech API / OpenAI TTS) to listen to English examples interactively.
 - **Phase 3 (Future):** Audio capture in the frontend using `MediaRecorder` sent to the backend for speech-to-text transcription via OpenAI Whisper.
 - **Phase 4 (Future):** Advanced validation and detailed pronunciation/grammar feedback utilizing GPT-4o-mini and Azure Speech Assessment.
+- **Phase 5 (Future):** Gamification & Metrics. Implementation of a study Time Tracker, daily streaks, experience points (XP), and progress dashboards to boost user engagement and retention.
 
 ---
 

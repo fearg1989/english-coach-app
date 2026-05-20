@@ -1,6 +1,7 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject, computed } from '@angular/core';
 
 import { Example } from '../../../../core/models/lesson.model';
+import { SpeechService } from '../../../../core/services/speech.service';
 
 @Component({
   selector: 'app-example-card',
@@ -10,6 +11,19 @@ import { Example } from '../../../../core/models/lesson.model';
 })
 export class ExampleCardComponent {
   @Input({ required: true }) example!: Example;
+
+  readonly speechService = inject(SpeechService);
+
+  /**
+   * True only when THIS card's phrase is being spoken.
+   * Derived from the service's isSpeaking signal + a local tracking flag.
+   */
+  private _isThisCardSpeaking = false;
+
+  /** Computed signal: speaking AND this card initiated it. */
+  readonly isThisCardSpeaking = computed(
+    () => this.speechService.isSpeaking() && this._isThisCardSpeaking
+  );
 
   get sentenceType(): 'affirmative' | 'negative' | 'interrogative' {
     const phrase = this.example?.phrase?.trim() ?? '';
@@ -151,10 +165,29 @@ export class ExampleCardComponent {
     return 'Subject + verb (+ complement)';
   }
 
-  /** Phase 2: Will call Web Speech API / OpenAI TTS to play audio. */
+  /** Phase 2: Speak ONLY the English phrase via Web Speech API. */
   onListenClick(): void {
-    // TODO Phase 2 — connect with TTS service (OpenAI / Web Speech API)
-    console.info('[Phase 2] Text-to-Speech not yet implemented.');
+    if (!this.speechService.isSupported()) return;
+
+    if (this.isThisCardSpeaking()) {
+      // Toggle off: stop if already speaking this card
+      this._isThisCardSpeaking = false;
+      this.speechService.stop();
+      return;
+    }
+
+    // Mark this card as the active speaker before calling speak()
+    this._isThisCardSpeaking = true;
+    // ONLY pass the English phrase — never the Spanish translation or IPA
+    this.speechService.speak(this.example.phrase);
+
+    // Reset local flag when speech ends naturally
+    const stopWatching = setInterval(() => {
+      if (!this.speechService.isSpeaking()) {
+        this._isThisCardSpeaking = false;
+        clearInterval(stopWatching);
+      }
+    }, 200);
   }
 
   /** Phase 3: Will open MediaRecorder, capture audio, send to Whisper STT. */

@@ -93,3 +93,27 @@ Para integrar generación autónoma de contenido en local o llamadas remotas de 
 
 ---
 *Este documento es obligatorio para todo desarrollador e IA trabajando en el proyecto english-coach-app.*
+
+---
+
+## 4. Technical Debt Register
+
+Las decisiones de arquitectura con compromisos deliberados o workarounds activos están documentadas en:
+
+**[`docs/tech_debt.md`](./tech_debt.md)**
+
+| ID | Feature | Workaround activo | Resolución |
+|---|---|---|---|
+| TD-001 | Advanced Prosody TTS — SSML | `pitch`/`rate` global en Web Speech API | Phase 4 — Azure/Google Cloud TTS con SSML |
+
+---
+
+## 5. Estado de Fases
+
+| Fase | Estado | Rama Git | Entregables clave |
+|---|---|---|---|
+| 1 | ✅ Completada | `main` | FastAPI backend · MySQL schema · Angular A1–C2 · Seed data completo |
+| 2 | ✅ Completada | `main` (merged desde `feature/phase-2-tts`) | `SpeechService` · botón Listen activo · sanitización de símbolos · aproximación pitch/rate para entonación · 17 tests |
+| 3 | 🚧 En curso | `feature/phase-3-speech-recognition` *(próximo)* | `MediaRecorder` · captura de audio · validación de pronunciación |
+| 4 | 🔜 Pendiente | — | Oracle OCI · Ollama/Gemma · SSML TTS · Roleplay IA |
+| 5 | 🔜 Pendiente | — | Streaks · XP · Time Tracker · dashboards |
