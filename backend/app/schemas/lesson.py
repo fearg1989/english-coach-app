@@ -12,6 +12,7 @@ class LessonBase(BaseModel):
     type: LessonType
     category: LessonCategory
     description: str | None = None
+    explanation: dict | None = None
     order_index: int = 0
     is_published: bool = False
 
@@ -24,6 +25,7 @@ class LessonUpdate(BaseModel):
     title: str | None = None
     type: LessonType | None = None
     description: str | None = None
+    explanation: dict | None = None
     order_index: int | None = None
     is_published: bool | None = None
 

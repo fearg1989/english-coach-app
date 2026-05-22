@@ -35,6 +35,12 @@ export class LevelComponent implements OnInit {
   ngOnInit(): void {
     const levelId = Number(this.route.snapshot.paramMap.get('levelId'));
 
+    const tab = this.route.snapshot.queryParamMap.get('tab') as FilterType | null;
+    const validTabs: FilterType[] = ['grammar', 'phonetics', 'vocabulary', 'all'];
+    if (tab && validTabs.includes(tab)) {
+      this.activeFilter.set(tab);
+    }
+
     forkJoin({
       level: this.levelService.getLevel(levelId),
       lessons: this.lessonService.getLessonsByLevel(levelId),

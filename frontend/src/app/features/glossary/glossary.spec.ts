@@ -70,12 +70,12 @@ describe('GlossaryComponent', () => {
   });
 
   it('should render phrasal verb pill with term', () => {
-    const pill = fixture.nativeElement.querySelector('.phrasal-pill__term');
+    const pill = fixture.nativeElement.querySelector('.phrasal-card__term');
     expect(pill?.textContent?.trim()).toBe('spin up');
   });
 
   it('should render phrasal verb meaning', () => {
-    const meaning = fixture.nativeElement.querySelector('.phrasal-pill__meaning');
+    const meaning = fixture.nativeElement.querySelector('.phrasal-card__meaning');
     expect(meaning?.textContent).toContain('Inicializar');
   });
 

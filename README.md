@@ -156,7 +156,8 @@ El orden en `ALL_LESSONS` dentro de `seed.py` es el orden real de inserción:
 | Módulo | Contenido |
 |--------|----------|
 | `a1_phonetics.py` | /θ/ y /ð/ sounds |
-| `a1_grammar.py` | Present Simple, Present Continuous |
+| `a1_grammar.py` | To Be, Present Simple, Present Continuous |
+| `a1_vocabulary.py` | Numbers/Years/Decimals, Colors, Countries/Nationalities, Jobs/Professions |
 | `a2_grammar.py` | Past Simple, Past Continuous, Be Going To, Will, Irregular Verbs |
 | `a2_phonetics.py` | /v/ vs /b/, Diphthongs, /ʃ/ vs /tʃ/, Silent Letters, Flap T |
 | `b1_grammar.py` | Present Perfect Simple/Continuous, Past Perfect Simple |

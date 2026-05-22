@@ -98,7 +98,8 @@ This table is the source of truth for `ALL_LESSONS` in `seed.py`. Both files mus
 | Module | Content |
 |--------|---------|
 | `a1_phonetics.py` | /θ/ and /ð/ sounds |
-| `a1_grammar.py` | Present Simple, Present Continuous |
+| `a1_grammar.py` | To Be, Present Simple, Present Continuous |
+| `a1_vocabulary.py` | Numbers/Years/Decimals, Colors, Countries/Nationalities, Jobs/Professions |
 | `a2_grammar.py` | Past Simple, Past Continuous, Be Going To, Will, Irregular Verbs |
 | `a2_phonetics.py` | /v/ vs /b/, Diphthongs, /ʃ/ vs /tʃ/, Silent Letters, Flap T /ɾ/ |
 | `b1_grammar.py` | Present Perfect Simple/Continuous, Past Perfect Simple |

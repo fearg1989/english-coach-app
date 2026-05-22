@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ViewEncapsulation } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 
 import { LessonDetail } from '../../core/models/lesson.model';
 import { LessonService } from '../../core/services/lesson.service';
+import { SpeechService } from '../../core/services/speech.service';
 import { ExampleCardComponent } from './components/example-card/example-card';
 import { ExerciseCardComponent } from './components/exercise-card/exercise-card';
 
@@ -20,10 +21,12 @@ export interface StructureRow {
   imports: [RouterModule, ExampleCardComponent, ExerciseCardComponent],
   templateUrl: './lesson.html',
   styleUrl: './lesson.scss',
+  encapsulation: ViewEncapsulation.None,
 })
 export class LessonComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly lessonService = inject(LessonService);
+  private readonly speechService = inject(SpeechService);
 
   readonly lesson = signal<LessonDetail | null>(null);
   readonly isLoading = signal(true);
@@ -32,6 +35,7 @@ export class LessonComponent implements OnInit {
   readonly from = signal<string | null>(null);
   readonly fromTopicId = signal<string | null>(null);
   readonly fromLevelId = signal<number | null>(null);
+  readonly fromTab = signal<string | null>(null);
 
   /**
    * Split the description into segments. We first split by newline,
@@ -147,6 +151,110 @@ export class LessonComponent implements OnInit {
     });
   });
 
+  /**
+   * Safe text parsing to split bold (**), code (`), and italic (*) markers.
+   * Completely complies with strict Separation of Concerns, eliminating innerHTML.
+   */
+  parseTextSegments(text: string): Array<{ text: string; type: 'plain' | 'bold' | 'code' | 'italic' }> {
+    if (!text) return [];
+    
+    // Split text by bold (**...**), code (`...`), and italic (*...*) markers
+    const regex = /(\*\*.*?\*\*|`.*?`|\*.*?\*)/g;
+    const parts = text.split(regex);
+    
+    return parts.map(part => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return { text: part.slice(2, -2), type: 'bold' as const };
+      } else if (part.startsWith('`') && part.endsWith('`')) {
+        return { text: part.slice(1, -1), type: 'code' as const };
+      } else if (part.startsWith('*') && part.endsWith('*')) {
+        return { text: part.slice(1, -1), type: 'italic' as const };
+      } else {
+        return { text: part, type: 'plain' as const };
+      }
+    }).filter(p => p.text !== '');
+  }
+
+  /**
+   * Splits a structured card string "Title | Formula | Example" into distinct parts.
+   */
+  splitCardItem(item: string): { title: string; formula?: string; example?: string } {
+    if (!item) return { title: '' };
+    const parts = item.split('|').map(p => p.trim());
+    if (parts.length >= 3) {
+      return { title: parts[0], formula: parts[1], example: parts[2] };
+    } else if (parts.length === 2) {
+      return { title: parts[0], formula: parts[1] };
+    } else {
+      return { title: parts[0] };
+    }
+  }
+
+  /**
+   * Splits a structured grid card string "Main | Pronunciation | Translation" into distinct parts.
+   */
+  splitGridItem(item: string): { main: string; pronunciation?: string; translation?: string } {
+    if (!item) return { main: '' };
+    const parts = item.split('|').map(p => p.trim());
+    if (parts.length >= 3) {
+      return { main: parts[0], pronunciation: parts[1], translation: parts[2] };
+    } else if (parts.length === 2) {
+      return { main: parts[0], pronunciation: parts[1] };
+    } else {
+      return { main: parts[0] };
+    }
+  }
+
+  /**
+   * Cleans text from markdown and custom formatting, handles bracketed placeholders
+   * like [number], [year], etc., and pronounces the phrase.
+   */
+  speakText(text: string): void {
+    if (!text) return;
+    
+    // Clean markdown bold, italic, and code formatting
+    let clean = text.replace(/\*\*|`|\*/g, '');
+    
+    // Replace bracketed placeholders with natural spoken equivalents
+    clean = clean.replace(/\[number\]/gi, 'number')
+                 .replace(/\[year\]/gi, 'year')
+                 .replace(/\[noun\]/gi, 'noun')
+                 .replace(/\[verb\]/gi, 'verb');
+    
+    // Clean any remaining brackets
+    clean = clean.replace(/[\[\]]/g, '').trim();
+    
+    // Filter out redundant numeric prefixes followed by spelling (e.g., "0 zero" -> "zero", "10 ten" -> "ten")
+    const numberWordMatch = clean.match(/^(\d+)\s*[-:]?\s*([a-zA-Z\s/]+)$/);
+    if (numberWordMatch) {
+      clean = numberWordMatch[2];
+    }
+    
+    this.speechService.speak(clean);
+  }
+
+  /**
+   * Smartly pronounces a table cell's English text, or speaks the row's primary English term
+   * if the cell represents a Spanish translation.
+   */
+  speakTableCell(cellText: string, columnIndex: number, headers: string[], rowCells: string[]): void {
+    const header = (headers[columnIndex] || '').toLowerCase();
+    
+    // If it's a translation or Spanish column, speak the main term (index 0) of the row instead
+    if (
+      header.includes('spanish') || 
+      header.includes('meaning') || 
+      header.includes('translation') || 
+      header.includes('significance') || 
+      header.includes('explanation')
+    ) {
+      const mainTerm = rowCells[0] || '';
+      this.speakText(mainTerm);
+    } else {
+      this.speakText(cellText);
+    }
+  }
+
   ngOnInit(): void {
     const lessonId = Number(this.route.snapshot.paramMap.get('lessonId'));
 
@@ -154,6 +262,7 @@ export class LessonComponent implements OnInit {
     this.fromTopicId.set(this.route.snapshot.queryParamMap.get('topicId'));
     const lvlId = this.route.snapshot.queryParamMap.get('levelId');
     this.fromLevelId.set(lvlId ? Number(lvlId) : null);
+    this.fromTab.set(this.route.snapshot.queryParamMap.get('tab'));
 
     this.lessonService.getLesson(lessonId).subscribe({
       next: (data) => {

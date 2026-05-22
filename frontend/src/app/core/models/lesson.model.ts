@@ -1,4 +1,4 @@
-export type LessonType = 'grammar' | 'phonetics';
+export type LessonType = 'grammar' | 'phonetics' | 'vocabulary';
 export type LessonCategory = 'verb_tenses' | 'phrasal_verbs' | 'prepositions' | 'irregular_verbs';
 export type ExerciseType = 'multiple_choice' | 'fill_blank' | 'pronunciation';
 
@@ -26,6 +26,26 @@ export interface Exercise {
   updated_at: string;
 }
 
+export interface LessonExplanation {
+  intro: string;
+  sections: Array<{
+    title: string;
+    layout: 'table' | 'list' | 'text' | 'composite' | 'grid' | 'cards';
+    content?: string;
+    headers?: string[];
+    rows?: string[][];
+    items?: string[];
+    subsections?: Array<{
+      title: string;
+      layout: 'table' | 'list' | 'text' | 'grid' | 'cards';
+      content?: string;
+      headers?: string[];
+      rows?: string[][];
+      items?: string[];
+    }>;
+  }>;
+}
+
 export interface Lesson {
   id: number;
   level_id: number;
@@ -33,6 +53,7 @@ export interface Lesson {
   type: LessonType;
   category: LessonCategory;
   description: string | null;
+  explanation: LessonExplanation | null;
   order_index: number;
   is_published: boolean;
   created_at: string;

@@ -1,3 +1,8 @@
+// ─── Tailwind CSS v4 Utilities ────────────────────────────────────────────────
+@import "tailwindcss";
+@source "./tailwind-safelist.txt";
+
+
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 :root {
   --color-bg: #f8fafc;
@@ -175,3 +180,12 @@ a { text-decoration: none; color: inherit; }
   &--correct   { background: var(--color-success-light); color: var(--color-success); }
   &--incorrect { background: var(--color-error-light); color: var(--color-error); }
 }
+
+// ─── Hide native details summary marker ───────────────────────────────────────
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+

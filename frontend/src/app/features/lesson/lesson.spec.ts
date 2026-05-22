@@ -13,7 +13,8 @@ const MOCK_DETAIL: LessonDetail = {
   title: 'The /θ/ Sound',
   type: 'phonetics',
   category: 'verb_tenses',
-  description: 'Voiceless TH sound.',
+  description: "Voiceless TH sound.",
+  explanation: null,
   order_index: 1,
   is_published: true,
   created_at: '2026-01-01T00:00:00',
@@ -51,7 +52,12 @@ describe('LessonComponent', () => {
         { provide: LessonService, useValue: lessonServiceSpy },
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: { get: () => '1' } } },
+          useValue: {
+            snapshot: {
+              paramMap: { get: () => '1' },
+              queryParamMap: { get: () => null },
+            },
+          },
         },
       ],
     }).compileComponents();

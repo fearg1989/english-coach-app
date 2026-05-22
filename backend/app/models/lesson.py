@@ -4,7 +4,7 @@ import enum
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, JSON, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 class LessonType(str, enum.Enum):
     GRAMMAR = "grammar"
     PHONETICS = "phonetics"
+    VOCABULARY = "vocabulary"
 
 
 class LessonCategory(str, enum.Enum):
@@ -34,6 +35,7 @@ class LessonCategory(str, enum.Enum):
     REPORTED_SPEECH  = "reported_speech"
     CONNECTORS       = "connectors"
     COLLOCATIONS     = "collocations"
+    VOCABULARY       = "vocabulary"
 
 
 class Lesson(Base):
@@ -53,12 +55,16 @@ class Lesson(Base):
         index=True,
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
-    type: Mapped[LessonType] = mapped_column(Enum(LessonType), nullable=False)
+    type: Mapped[LessonType] = mapped_column(
+        Enum(LessonType, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    )
     category: Mapped[LessonCategory] = mapped_column(
         Enum(LessonCategory, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False, default=LessonCategory.VERB_TENSES, index=True,
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    explanation: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

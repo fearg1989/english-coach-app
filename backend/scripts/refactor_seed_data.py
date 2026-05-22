@@ -1,0 +1,2 @@
+"import os\nimport re\n\nFILES = [\n    \"/Users/ropa/Develop/english-coach-app/backend/scripts/seed_data/a1_grammar.py\",\n    \"/Users/ropa/Develop/english-coach-app/backend/scripts/seed_data/a1_vocabulary.py\",\n    \"/Users/ropa/Develop/english-coach-a
+<truncated 6227 bytes>

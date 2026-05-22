@@ -5,20 +5,21 @@ Core Grammar Path: 12 Active Verb Tenses (A1 → B2) + C1 Narrative Tenses bonus
 Includes the original A1 Phonetics lesson (/θ/ and /ð/ sounds).
 
 Lesson data is modularised under scripts/seed_data/:
-  core_levels   → CEFR level definitions
-  a1_phonetics  → Phonetics lesson (/θ/ and /ð/ sounds)
-  a1_grammar    → Present Simple, Present Continuous
-  a2_grammar    → Past Simple, Past Continuous, Be Going To, Will, Irregular Verbs
-  a2_phonetics  → /v/ vs /b/, Diphthongs /oʊ/ & /aʊ/, /ʃ/ vs /tʃ/, Silent Letters, Flap T /ɾ/
-  b1_grammar    → Present Perfect Simple/Continuous, Past Perfect Simple
-  prepositions  → To/For/From (B1), By/Until/For/During (B2), Dependent Verbs (B2), Leadership Adj/Nouns (C1), Space & Data Flow (C1)
-  b1_phonetics  → Sentence Rhythm & Weak Forms, Word Stress Noun/Verb, Linking, Assimilation
-  b2_grammar    → Past Perfect Continuous, Future Continuous, Future Perfect, Phrasal Verbs
-  b2_phonetics  → Elision, Speaking in Chunks, Prosody, Geminates
-  c1_grammar    → Narrative Tenses & Inversion, Cleft Sentences, Participle Clauses, The Subjunctive
-  c1_phonetics  → Advanced Prosody (Intonation for Meaning), Advanced Assimilation (/t/+/j/→/tʃ/)
-  c2_grammar    → Hedging & Distancing, Semantic Precision, Complex Embedded Clauses
-  c2_phonetics  → Decoding Extreme Connected Speech, Sarcasm, Irony & Subtle Tone
+  core_levels        → CEFR level definitions
+  a1_phonetics       → Phonetics lesson (/θ/ and /ð/ sounds)
+  a1_grammar         → To Be, Present Simple, Present Continuous
+  a1_vocabulary      → Numbers/Years/Decimals, Colors, Countries/Nationalities, Jobs/Professions
+  a2_grammar         → Past Simple, Past Continuous, Be Going To, Will, Irregular Verbs
+  a2_phonetics       → /v/ vs /b/, Diphthongs /oʊ/ & /aʊ/, /ʃ/ vs /tʃ/, Silent Letters, Flap T /ɾ/
+  b1_grammar         → Present Perfect Simple/Continuous, Past Perfect Simple
+  prepositions       → To/For/From (B1), By/Until/For/During (B2), Dependent Verbs (B2), Leadership Adj/Nouns (C1), Space & Data Flow (C1)
+  b1_phonetics       → Sentence Rhythm & Weak Forms, Word Stress Noun/Verb, Linking, Assimilation
+  b2_grammar         → Past Perfect Continuous, Future Continuous, Future Perfect, Phrasal Verbs
+  b2_phonetics       → Elision, Speaking in Chunks, Prosody, Geminates
+  c1_grammar         → Narrative Tenses & Inversion, Cleft Sentences, Participle Clauses, The Subjunctive
+  c1_phonetics       → Advanced Prosody (Intonation for Meaning), Advanced Assimilation (/t/+/j/→/tʃ/)
+  c2_grammar         → Hedging & Distancing, Semantic Precision, Complex Embedded Clauses
+  c2_phonetics       → Decoding Extreme Connected Speech, Sarcasm, Irony & Subtle Tone
   advanced_specialized → Verb Patterns (B1), Connectors (B2), Collocations (C1)
 
 Behavior: ALWAYS truncates existing data and re-seeds from scratch.
@@ -51,16 +52,22 @@ from app.models import (  # noqa: F401
 )
 from scripts.seed_data.a1_grammar import A1_GRAMMAR_LESSONS
 from scripts.seed_data.a1_phonetics import A1_PHONETICS_LESSONS, PHONETICS
+from scripts.seed_data.a1_vocabulary import A1_VOCABULARY_LESSONS
 from scripts.seed_data.a2_grammar import A2_GRAMMAR_LESSONS
 from scripts.seed_data.a2_phonetics import A2_PHONETICS_LESSONS
+from scripts.seed_data.a2_vocabulary import A2_VOCABULARY_LESSONS
 from scripts.seed_data.b1_grammar import B1_GRAMMAR_LESSONS
 from scripts.seed_data.b1_phonetics import B1_PHONETICS_LESSONS
+from scripts.seed_data.b1_vocabulary import B1_VOCABULARY_LESSONS
 from scripts.seed_data.b2_grammar import B2_GRAMMAR_LESSONS
 from scripts.seed_data.b2_phonetics import B2_PHONETICS_LESSONS
+from scripts.seed_data.b2_vocabulary import B2_VOCABULARY_LESSONS
 from scripts.seed_data.c1_grammar import C1_GRAMMAR_LESSONS
 from scripts.seed_data.c1_phonetics import C1_PHONETICS_LESSONS
+from scripts.seed_data.c1_vocabulary import C1_VOCABULARY_LESSONS
 from scripts.seed_data.c2_grammar import C2_GRAMMAR_LESSONS
 from scripts.seed_data.c2_phonetics import C2_PHONETICS_LESSONS
+from scripts.seed_data.c2_vocabulary import C2_VOCABULARY_LESSONS
 from scripts.seed_data.advanced_specialized import ADVANCED_SPECIALIZED_LESSONS
 from scripts.seed_data.prepositions import PREPOSITIONS_LESSONS
 from scripts.seed_data.core_levels import LEVELS
@@ -68,16 +75,22 @@ from scripts.seed_data.core_levels import LEVELS
 ALL_LESSONS: list[dict] = (
     A1_PHONETICS_LESSONS
     + A1_GRAMMAR_LESSONS
+    + A1_VOCABULARY_LESSONS
     + A2_GRAMMAR_LESSONS
     + A2_PHONETICS_LESSONS
+    + A2_VOCABULARY_LESSONS
     + B1_GRAMMAR_LESSONS
     + B1_PHONETICS_LESSONS
+    + B1_VOCABULARY_LESSONS
     + B2_GRAMMAR_LESSONS
     + B2_PHONETICS_LESSONS
+    + B2_VOCABULARY_LESSONS
     + C1_GRAMMAR_LESSONS
     + C1_PHONETICS_LESSONS
+    + C1_VOCABULARY_LESSONS
     + C2_GRAMMAR_LESSONS
     + C2_PHONETICS_LESSONS
+    + C2_VOCABULARY_LESSONS
     + ADVANCED_SPECIALIZED_LESSONS
     + PREPOSITIONS_LESSONS
 )
@@ -200,14 +213,46 @@ def seed() -> None:
         ).first()
         if category_type_row:
             col_type = category_type_row[0]
-            if "general_grammar" not in col_type or "modal_verbs" not in col_type or "phonetics" not in col_type:
+            if (
+                "general_grammar" not in col_type
+                or "modal_verbs" not in col_type
+                or "phonetics" not in col_type
+                or "verb_patterns" not in col_type
+                or "vocabulary" not in col_type
+            ):
                 conn.execute(
                     text(
                         "ALTER TABLE lessons MODIFY COLUMN category "
-                        "ENUM('verb_tenses','modal_verbs','phrasal_verbs','prepositions','irregular_verbs','general_grammar','phonetics') "
+                        "ENUM('verb_tenses','modal_verbs','phrasal_verbs','prepositions',"
+                        "'irregular_verbs','general_grammar','phonetics','verb_patterns',"
+                        "'conditionals','passive_voice','reported_speech','connectors',"
+                        "'collocations','vocabulary') "
                         "NOT NULL DEFAULT 'verb_tenses'"
                     )
                 )
+        # ── lessons.type ENUM: extend to include vocabulary ───────────────────
+        type_col_row = conn.execute(
+            text(
+                "SELECT COLUMN_TYPE FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = DATABASE() "
+                "AND TABLE_NAME = 'lessons' AND COLUMN_NAME = 'type'"
+            )
+        ).first()
+        if type_col_row and "vocabulary" not in type_col_row[0]:
+            conn.execute(
+                text(
+                    "ALTER TABLE lessons MODIFY COLUMN type "
+                    "ENUM('grammar','phonetics','vocabulary') NOT NULL"
+                )
+            )
+        # ── lessons.explanation column ─────────────────────────────────────────
+        explanation_col = conn.execute(
+            text("SHOW COLUMNS FROM lessons LIKE 'explanation'")
+        ).first()
+        if not explanation_col:
+            conn.execute(
+                text("ALTER TABLE lessons ADD COLUMN explanation LONGTEXT NULL")
+            )
         # ── examples.sentence_type column ─────────────────────────────────────
         sentence_type_col = conn.execute(
             text("SHOW COLUMNS FROM examples LIKE 'sentence_type'")
@@ -281,7 +326,7 @@ def seed() -> None:
         total_exercises = len(PHONETICS["exercises"]) + exercise_count
         print("\n  ✅ Seed completed successfully!")
         print(f"     • 6 levels (A1 → C2)")
-        print(f"     • 1 phonetics lesson + {lesson_count} grammar lessons ({lesson_count + 1} total)")
+        print(f"     • 1 phonetics lesson + {lesson_count} grammar/vocabulary lessons ({lesson_count + 1} total)")
         print(f"     • {total_examples} examples with IPA notation and Spanish translation")
         print(f"     • {total_exercises} exercises (fill_blank, multiple_choice, pronunciation)")
         print(f"     • {len(GLOSSARY_PHRASAL_VERBS)} phrasal verb glossary entries")
