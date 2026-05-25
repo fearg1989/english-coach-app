@@ -128,6 +128,13 @@ a { text-decoration: none; color: inherit; }
     border-color: #fca5a5;
   }
 
+  &--success {
+    background: #16a34a;
+    color: #fff;
+    border-color: #15803d;
+    &:hover:not(:disabled) { filter: brightness(1.1); }
+  }
+
   &--disabled,
   &:disabled {
     opacity: 0.42;

@@ -91,6 +91,7 @@ class AudioService:
                 word_timestamps=True
             )
             transcribed_text = result.get("text", "").strip()
+            transcribed_text = self._convert_digits_to_words(transcribed_text)
             
             # Extract word-level details
             words = []
@@ -98,12 +99,23 @@ class AudioService:
                 for w in segment.get("words", []):
                     word_text = w.get("word", "").strip()
                     if word_text:
-                        words.append({
-                            "word": word_text,
-                            "start": w.get("start", 0.0),
-                            "end": w.get("end", 0.0),
-                            "probability": w.get("probability", 1.0)
-                        })
+                        # Expand numeric words (e.g. "1941" -> "nineteen", "forty-one")
+                        if any(char.isdigit() for char in word_text):
+                            converted = self._convert_digits_to_words(word_text)
+                            for sw in converted.split():
+                                words.append({
+                                    "word": sw,
+                                    "start": w.get("start", 0.0),
+                                    "end": w.get("end", 0.0),
+                                    "probability": w.get("probability", 1.0)
+                                })
+                        else:
+                            words.append({
+                                "word": word_text,
+                                "start": w.get("start", 0.0),
+                                "end": w.get("end", 0.0),
+                                "probability": w.get("probability", 1.0)
+                            })
             
             logger.info(f"Successfully transcribed audio: '{transcribed_text}'")
             return {
@@ -153,7 +165,7 @@ class AudioService:
                 temperature=0.0,
                 word_timestamps=False
             )
-            return result.get("text", "").strip()
+            return self._convert_digits_to_words(result.get("text", "").strip())
             
         finally:
             try:
@@ -196,6 +208,9 @@ class AudioService:
             
         # Convert to lowercase
         text = text.lower()
+        
+        # Normalize numeric digits into written English words
+        text = self._convert_digits_to_words(text)
         
         # Dictionary of standard English contractions
         contractions = {
@@ -292,12 +307,10 @@ class AudioService:
                     trans_word_dict = transcribed_words[w_idx]
                     prob = trans_word_dict.get("probability", 1.0)
                     
-                    if prob >= 0.80:
+                    if prob >= 0.35:
                         status = "correct"
-                    elif prob >= 0.40:
-                        status = "unclear"
                     else:
-                        status = "incorrect"
+                        status = "unclear"
                         
                     feedback[t_idx] = {
                         "word": target_word,
@@ -349,6 +362,74 @@ class AudioService:
                 }
                 
         return feedback
+
+    def _convert_digits_to_words(self, text: str) -> str:
+        """
+        Converts any sequences of digits (integers or decimals) in the text to their spoken English word equivalents.
+        e.g., "1941" -> "nineteen forty-one"
+        e.g., "3.5" -> "three point five"
+        e.g., "42" -> "forty-two"
+        """
+        import re
+
+        ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+        teens = ["ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"]
+        tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+
+        def convert_below_100(val: int) -> str:
+            if val < 10:
+                return ones[val]
+            elif val < 20:
+                return teens[val - 10]
+            else:
+                tens_part = tens[val // 10]
+                ones_part = ones[val % 10]
+                if ones_part:
+                    return f"{tens_part}-{ones_part}"
+                return tens_part
+
+        def convert_integer(val_str: str) -> str:
+            # If it looks like a year (4 digits, starting with 1 or 2, e.g. 1000 to 2999)
+            if len(val_str) == 4 and val_str[0] in ('1', '2'):
+                part1 = int(val_str[:2])
+                part2 = int(val_str[2:])
+                w1 = convert_below_100(part1)
+                if part2 == 0:
+                    return f"{w1} hundred"
+                elif part2 < 10:
+                    return f"{w1} oh-{ones[part2]}"
+                else:
+                    return f"{w1} {convert_below_100(part2)}"
+            
+            val = int(val_str)
+            if val == 0:
+                return "zero"
+                
+            if val < 100:
+                return convert_below_100(val)
+                
+            if val < 1000:
+                hundreds = ones[val // 100]
+                remainder = val % 100
+                if remainder == 0:
+                    return f"{hundreds} hundred"
+                else:
+                    return f"{hundreds} hundred and {convert_below_100(remainder)}"
+            
+            return val_str
+
+        def convert_decimal(match) -> str:
+            num_str = match.group(0)
+            if '.' in num_str:
+                parts = num_str.split('.')
+                whole = convert_integer(parts[0])
+                decimals = " ".join(ones[int(d)] if d != '0' else 'zero' for d in parts[1])
+                return f"{whole} point {decimals}"
+            else:
+                return convert_integer(num_str)
+
+        pattern = r'\b\d+(?:\.\d+)?\b'
+        return re.sub(pattern, convert_decimal, text)
 
 # Export a single thread-safe instance
 audio_service = AudioService()

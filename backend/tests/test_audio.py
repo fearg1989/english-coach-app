@@ -193,7 +193,7 @@ def test_align_words():
     transcribed_words = [
         {"word": "I", "probability": 0.95},
         {"word": "want", "probability": 0.85},
-        {"word": "a", "probability": 0.70},  # unclear
+        {"word": "a", "probability": 0.25},  # unclear
         {"word": "sheep", "probability": 0.90}  # replaced/incorrect
     ]
     

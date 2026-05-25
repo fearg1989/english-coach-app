@@ -1,9 +1,12 @@
-import { Component, OnInit, inject, signal, computed, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, ViewEncapsulation } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 
 import { LessonDetail } from '../../core/models/lesson.model';
 import { LessonService } from '../../core/services/lesson.service';
 import { SpeechService } from '../../core/services/speech.service';
+import { ApiService } from '../../core/services/api.service';
+import { PracticeSession, PracticeExercise } from '../../core/models/practice.model';
+import { environment } from '../../../environments/environment';
 import { ExampleCardComponent } from './components/example-card/example-card';
 import { ExerciseCardComponent } from './components/exercise-card/exercise-card';
 
@@ -23,10 +26,11 @@ export interface StructureRow {
   styleUrl: './lesson.scss',
   encapsulation: ViewEncapsulation.None,
 })
-export class LessonComponent implements OnInit {
+export class LessonComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly lessonService = inject(LessonService);
   private readonly speechService = inject(SpeechService);
+  private readonly apiService = inject(ApiService);
 
   readonly lesson = signal<LessonDetail | null>(null);
   readonly isLoading = signal(true);
@@ -36,6 +40,47 @@ export class LessonComponent implements OnInit {
   readonly fromTopicId = signal<string | null>(null);
   readonly fromLevelId = signal<number | null>(null);
   readonly fromTab = signal<string | null>(null);
+
+  // --- Dynamic Practice Session (Phase 4.5) ---
+  readonly practiceState = signal<'idle' | 'generating' | 'active' | 'summary' | 'error'>('idle');
+  readonly activePracticeTheme = signal<string | null>(null);
+  readonly customTheme = signal<string>('');
+  readonly practiceSession = signal<PracticeSession | null>(null);
+  readonly currentExerciseIndex = signal<number>(0);
+  readonly showHint = signal<boolean>(false);
+  readonly userAnswer = signal<string>('');
+  readonly isEvaluating = signal<boolean>(false);
+
+  // Exercise verification feedback states
+  readonly exerciseChecked = signal<boolean>(false);
+  readonly isExerciseCorrect = signal<boolean>(false);
+  readonly exerciseAccuracyScore = signal<number | null>(null);
+  readonly exerciseWordsFeedback = signal<any[]>([]);
+  readonly exerciseSpeechTranscribed = signal<string | null>(null);
+
+  // Total correct counter
+  readonly correctCount = signal<number>(0);
+
+  // Whisper / Recording State for Wizard Card
+  readonly recordingState = signal<'idle' | 'recording' | 'processing' | 'success' | 'error'>('idle');
+  readonly errorMessage = signal<string | null>(null);
+  readonly recordingDuration = signal<number>(0);
+  readonly interimTranscript = signal<string>('');
+
+  private socket: WebSocket | null = null;
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
+  private timerInterval: any = null;
+
+  readonly activeExercise = computed<PracticeExercise | null>(() => {
+    const session = this.practiceSession();
+    if (!session) return null;
+    const idx = this.currentExerciseIndex();
+    if (idx >= 0 && idx < session.exercises.length) {
+      return session.exercises[idx];
+    }
+    return null;
+  });
 
   /**
    * Split the description into segments. We first split by newline,
@@ -274,5 +319,243 @@ export class LessonComponent implements OnInit {
         this.isLoading.set(false);
       },
     });
+  }
+
+  ngOnDestroy(): void {
+    this.cleanupSocket();
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+    }
+  }
+
+  // ─── Practice Session Logic ───────────────────────────────────────────────
+
+  startThemedPractice(theme: string): void {
+    const lessonData = this.lesson();
+    if (!lessonData) return;
+
+    this.activePracticeTheme.set(theme);
+    this.practiceState.set('generating');
+    this.errorMessage.set(null);
+    this.currentExerciseIndex.set(0);
+    this.correctCount.set(0);
+    this.resetExerciseStates();
+
+    this.apiService.post<PracticeSession>('/practice/generate', {
+      lesson_id: lessonData.id,
+      theme: theme
+    }).subscribe({
+      next: (session) => {
+        this.practiceSession.set(session);
+        this.practiceState.set('active');
+      },
+      error: (err) => {
+        console.error('Failed to generate practice session:', err);
+        this.errorMessage.set(err.error?.detail || 'No se pudo contactar al AI Coach para generar la sesión. Por favor, asegúrate de que Ollama esté encendido y vuelve a intentarlo.');
+        this.practiceState.set('error');
+      }
+    });
+  }
+
+  resetExerciseStates(): void {
+    this.userAnswer.set('');
+    this.showHint.set(false);
+    this.exerciseChecked.set(false);
+    this.isExerciseCorrect.set(false);
+    this.exerciseAccuracyScore.set(null);
+    this.exerciseWordsFeedback.set([]);
+    this.exerciseSpeechTranscribed.set(null);
+    this.recordingState.set('idle');
+    this.interimTranscript.set('');
+  }
+
+  checkAnswer(): void {
+    const exercise = this.activeExercise();
+    if (!exercise) return;
+
+    const typedAnswer = this.userAnswer().trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"");
+    const targetAnswer = exercise.correct_answer.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"");
+
+    this.exerciseChecked.set(true);
+
+    if (typedAnswer === targetAnswer || targetAnswer.includes(typedAnswer) && typedAnswer.length > 2) {
+      this.isExerciseCorrect.set(true);
+      this.correctCount.update(c => c + 1);
+    } else {
+      this.isExerciseCorrect.set(false);
+    }
+  }
+
+  onRecordClick(): void {
+    if (this.recordingState() === 'recording') {
+      this.stopRecording();
+    } else {
+      this.startRecording();
+    }
+  }
+
+  private startRecording(): void {
+    const exercise = this.activeExercise();
+    if (!exercise) return;
+
+    this.recordingState.set('recording');
+    this.errorMessage.set(null);
+    this.recordingDuration.set(0);
+    this.interimTranscript.set('');
+    this.audioChunks = [];
+
+    if (typeof window === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      this.errorMessage.set('Tu navegador no soporta la grabación de audio o requiere HTTPS.');
+      this.recordingState.set('error');
+      return;
+    }
+
+    const target = encodeURIComponent(exercise.correct_answer);
+    
+    let apiBase = environment.apiUrl;
+    if (apiBase.startsWith('/')) {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      apiBase = `${protocol}//${window.location.host}${apiBase}`;
+    } else {
+      apiBase = apiBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+    }
+    
+    const wsUrl = `${apiBase}/audio/stream-evaluation?target_text=${target}`;
+    this.socket = new WebSocket(wsUrl);
+
+    this.socket.onopen = () => {
+      console.log('WebSocket practice session connection opened');
+      
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((stream) => {
+          this.mediaRecorder = new MediaRecorder(stream);
+          this.mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+              this.audioChunks.push(event.data);
+              
+              if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+                this.socket.send(event.data);
+              }
+            }
+          };
+
+          this.mediaRecorder.start(1000);
+
+          this.timerInterval = setInterval(() => {
+            this.recordingDuration.update((d) => d + 1);
+            if (this.recordingDuration() >= 15) {
+              this.stopRecording();
+            }
+          }, 1000);
+        })
+        .catch((err) => {
+          console.error('Error practice mic access:', err);
+          this.errorMessage.set('Acceso al micrófono denegado. Activa los permisos en tu navegador.');
+          this.recordingState.set('error');
+          this.cleanupSocket();
+        });
+    };
+
+    this.socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'interim') {
+          this.interimTranscript.set(data.text);
+        } else if (data.type === 'final') {
+          const score = data.accuracy_score;
+          const passed = score >= 75;
+          this.exerciseAccuracyScore.set(score);
+          this.exerciseWordsFeedback.set(data.words);
+          this.exerciseSpeechTranscribed.set(data.transcribed_text);
+          this.userAnswer.set(data.transcribed_text);
+          
+          this.exerciseChecked.set(true);
+          this.isExerciseCorrect.set(passed);
+          if (passed) {
+            this.correctCount.update(c => c + 1);
+          }
+          this.recordingState.set('success');
+          this.cleanupSocket();
+        } else if (data.type === 'error') {
+          this.errorMessage.set(data.detail || 'Error en el procesamiento del flujo.');
+          this.recordingState.set('error');
+          this.cleanupSocket();
+        }
+      } catch (err) {
+        console.error('Error parsing practice ws data:', err);
+      }
+    };
+
+    this.socket.onerror = (err) => {
+      console.error('Practice WebSocket error:', err);
+      this.errorMessage.set('Error en la conexión en tiempo real.');
+      this.recordingState.set('error');
+      this.stopRecording();
+      this.cleanupSocket();
+    };
+
+    this.socket.onclose = () => {
+      console.log('Practice WebSocket closed');
+    };
+  }
+
+  private stopRecording(): void {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+      if (this.mediaRecorder.stream) {
+        this.mediaRecorder.stream.getTracks().forEach((track) => track.stop());
+      }
+    }
+
+    if (this.recordingState() === 'recording') {
+      this.recordingState.set('processing');
+    }
+
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify({ event: 'stop' }));
+    }
+  }
+
+  private cleanupSocket(): void {
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
+    }
+  }
+
+  nextExercise(): void {
+    const session = this.practiceSession();
+    if (!session) return;
+
+    const nextIndex = this.currentExerciseIndex() + 1;
+    if (nextIndex < session.exercises.length) {
+      this.currentExerciseIndex.set(nextIndex);
+      this.resetExerciseStates();
+    } else {
+      this.practiceState.set('summary');
+    }
+  }
+
+  retryExercise(): void {
+    if (this.isExerciseCorrect()) {
+      this.correctCount.update(c => Math.max(0, c - 1));
+    }
+    this.resetExerciseStates();
+  }
+
+  closePractice(): void {
+    this.cleanupSocket();
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+    }
+    this.practiceState.set('idle');
+    this.activePracticeTheme.set(null);
+    this.customTheme.set('');
+    this.practiceSession.set(null);
   }
 }

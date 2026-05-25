@@ -603,6 +603,387 @@
     </div>
   </div>
   }
-  }
 
+  <!-- ─── Phase 4.5: Context-Aware Dynamic Practice Sessions ─── -->
+  <div class="lesson-section dynamic-practice-section mt-12 pt-10 border-t border-slate-200/60">
+    <div class="dynamic-practice-hero bg-gradient-to-r from-indigo-900 to-indigo-950 text-white rounded-3xl p-8 shadow-xl overflow-hidden relative">
+      <div class="absolute -right-16 -top-16 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
+      <div class="absolute -left-20 -bottom-20 w-80 h-80 bg-violet-600/10 rounded-full blur-3xl"></div>
+      
+      <div class="relative z-10 w-full">
+        
+        <!-- IDLE / THEME SELECTION STATE -->
+        @if (practiceState() === 'idle') {
+          <div class="max-w-2xl animate-fade-in">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/25 border border-indigo-400/30 text-indigo-200 mb-4 tracking-wider uppercase">
+              ⚡ Phase 5: Dynamic AI Practice
+            </span>
+            <h2 class="text-3xl font-extrabold tracking-tight mb-3">
+              Context-Aware Dynamic Practice
+            </h2>
+            <p class="text-indigo-200 leading-relaxed mb-8">
+              Ready to push your limits? Choose a customized real-world theme. The AI Coach will detect your current lesson context 
+              <strong>({{ lesson()!.title }})</strong> at level <strong>({{ lesson()!.level_id === 1 ? 'A1' : lesson()!.level_id === 2 ? 'A2' : 'B1' }})</strong>, and generate a dynamic set of custom interactive exercises tailored just for you!
+            </p>
+
+            <div class="theme-selection">
+              <h3 class="text-sm font-semibold tracking-wider uppercase text-indigo-300 mb-4">
+                Select a theme to start:
+              </h3>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- Software Dev -->
+                <button (click)="startThemedPractice('Software Development')" class="theme-btn theme-btn--dev">
+                  <span class="theme-btn__label">Tech & Coding</span>
+                </button>
+
+                <!-- Cinema -->
+                <button (click)="startThemedPractice('Cinema & Movies')" class="theme-btn theme-btn--cinema">
+                  <span class="theme-btn__label">Cinema</span>
+                </button>
+
+                <!-- Music -->
+                <button (click)="startThemedPractice('Music & Culture')" class="theme-btn theme-btn--music">
+                  <span class="theme-btn__label">Music</span>
+                </button>
+
+                <!-- Job Interviews -->
+                <button (click)="startThemedPractice('Job Interviews')" class="theme-btn theme-btn--work">
+                  <span class="theme-btn__label">Job Interviews</span>
+                </button>
+              </div>
+
+              <!-- Custom Theme Input Panel -->
+              <div class="custom-theme-input-group mt-8 pt-6 border-t border-indigo-500/20">
+                <label for="customThemeInput" class="block text-sm font-semibold tracking-wider uppercase text-indigo-300 mb-2">
+                  Or write your own custom theme:
+                </label>
+                <p class="text-xs text-indigo-200/60 mb-3 italic">
+                  Example ideas: "Ordering coffee in New York", "Booking a hotel in London", "Discussing weather in Scotland", "Talking about my pets".
+                </p>
+                <div class="flex flex-col sm:flex-row gap-3">
+                  <input type="text"
+                         id="customThemeInput"
+                         [value]="customTheme()"
+                         (input)="customTheme.set($any($event.target).value)"
+                         placeholder="Type your custom theme..."
+                         class="custom-theme-input"
+                         (keyup.enter)="customTheme().trim().length > 0 && startThemedPractice(customTheme())" />
+                  <button (click)="startThemedPractice(customTheme())"
+                          [disabled]="customTheme().trim().length === 0"
+                          class="custom-theme-submit-btn">
+                    Generate Session ⚡
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- LOADING STATE -->
+        @if (practiceState() === 'generating') {
+          <div class="practice-wizard-card practice-wizard-card--loading p-10 text-center flex flex-col items-center gap-6 animate-fade-in">
+            <div class="generating-spinner-container">
+              <span class="generating-spinner"></span>
+              <div class="pulse-ring"></div>
+            </div>
+            <div class="mt-4">
+              <h3 class="text-2xl font-bold text-white mb-2">Creating Practice Session</h3>
+              <p class="text-indigo-200/70 text-sm mb-1 animate-pulse">
+                AI Coach is crafting custom {{ activePracticeTheme() }} exercises...
+              </p>
+              <p class="text-indigo-300/40 text-xs">
+                Infusing: Grammar ({{ lesson()!.title }})
+              </p>
+            </div>
+          </div>
+        }
+
+        <!-- ERROR STATE -->
+        @if (practiceState() === 'error') {
+          <div class="practice-wizard-card practice-wizard-card--error p-8 text-center flex flex-col items-center animate-fade-in">
+            <div class="w-16 h-16 bg-red-500/10 border border-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-5 text-2xl">
+              ⚠️
+            </div>
+            <h3 class="text-xl font-bold text-white mb-3">AI Coach Unavailable</h3>
+            <p class="text-indigo-200/75 text-sm mb-6 leading-relaxed max-w-md">
+              {{ errorMessage() }}
+            </p>
+            <div class="flex gap-3 justify-center">
+              @if (activePracticeTheme()) {
+                <button (click)="startThemedPractice(activePracticeTheme()!)" class="btn btn--primary px-6 py-2.5">
+                  Try Again
+                </button>
+              }
+              <button (click)="closePractice()" class="btn btn--secondary px-6 py-2.5">
+                Close
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- ACTIVE QUIZ STATE -->
+        @if (practiceState() === 'active' && activeExercise()) {
+          <div class="practice-wizard-card flex flex-col relative animate-fade-in">
+            
+            <!-- Header/Progress -->
+            <div class="wizard-header pb-6 border-b border-white/10 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="px-2.5 py-1 rounded bg-indigo-500/30 border border-indigo-400/20 text-indigo-200 text-xs font-semibold uppercase tracking-wider">
+                  {{ activePracticeTheme() }}
+                </span>
+                <span class="text-indigo-200/75 text-sm font-medium">
+                  Exercise {{ currentExerciseIndex() + 1 }} of {{ practiceSession()?.exercises?.length || 5 }}
+                </span>
+              </div>
+              
+              <button (click)="closePractice()" class="wizard-close-btn text-indigo-300 hover:text-white" aria-label="Close practice session">
+                ✕
+              </button>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-white/5 h-1.5 relative overflow-hidden rounded-full my-4">
+              <div class="bg-gradient-to-r from-cyan-400 to-indigo-400 h-full transition-all duration-300"
+                   [style.width.%]="((currentExerciseIndex() + 1) / (practiceSession()?.exercises?.length || 5)) * 100">
+              </div>
+            </div>
+
+            <!-- Body / Active Exercise -->
+            <div class="wizard-body py-4 flex-1 flex flex-col gap-5">
+              <div class="exercise-type-tag">
+                @if (activeExercise()!.type === 'fill_in_the_blank') {
+                  <span class="inline-flex items-center gap-1.5 text-cyan-400 text-xs font-bold uppercase tracking-widest">
+                    🔤 Fill in the Blank
+                  </span>
+                } @else {
+                  <span class="inline-flex items-center gap-1.5 text-violet-400 text-xs font-bold uppercase tracking-widest">
+                    💬 Roleplay Dialogue
+                  </span>
+                }
+              </div>
+
+              <!-- Prompt Display -->
+              <div class="exercise-prompt bg-indigo-950/40 border border-indigo-500/20 rounded-2xl p-6 relative">
+                <p class="text-white text-lg font-medium leading-relaxed pr-10">
+                  {{ activeExercise()!.prompt }}
+                </p>
+                
+                <!-- Speak prompt button -->
+                <button (click)="speakText(activeExercise()!.prompt)" class="absolute right-4 top-5 p-2 rounded-full hover:bg-white/10 text-indigo-300 hover:text-indigo-200 transition-colors" title="Hear prompt">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- User Response Area -->
+              <div class="user-response-panel mb-2">
+                
+                <!-- Answer Input Field -->
+                @if (recordingState() !== 'recording' && recordingState() !== 'processing' && recordingState() !== 'success') {
+                  <div class="relative mb-4">
+                    <input type="text" 
+                           [value]="userAnswer()" 
+                           (input)="userAnswer.set($any($event.target).value)"
+                           [disabled]="exerciseChecked()"
+                           placeholder="Type your English answer here..."
+                           class="w-full bg-slate-950/60 border border-slate-700/60 text-white rounded-xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-base placeholder-indigo-200/30 disabled:opacity-50"
+                           (keyup.enter)="!exerciseChecked() && userAnswer().trim().length > 0 && checkAnswer()" />
+                  </div>
+                }
+
+                <!-- Mic/Speech Recording Section -->
+                <div class="speech-recording-area flex flex-col items-center py-4 bg-white/5 border border-white/5 rounded-2xl p-6">
+                  
+                  @if (recordingState() === 'recording') {
+                    <div class="recording-visualizer flex items-center justify-center gap-1.5 mb-4 h-8">
+                      <span class="bar animate-pulse-bar-1"></span>
+                      <span class="bar animate-pulse-bar-2"></span>
+                      <span class="bar animate-pulse-bar-3"></span>
+                      <span class="bar animate-pulse-bar-4"></span>
+                    </div>
+                    <p class="text-red-400 text-sm font-semibold mb-1 animate-pulse flex items-center gap-1.5">
+                      🔴 Recording Speech (0:{{ recordingDuration() < 10 ? '0' : '' }}{{ recordingDuration() }})
+                    </p>
+                    @if (interimTranscript()) {
+                      <p class="text-indigo-200 text-xs italic mt-2 bg-slate-900/40 px-3 py-1.5 rounded-lg max-w-full text-center">
+                        "{{ interimTranscript() }}"
+                      </p>
+                    }
+                  } @else if (recordingState() === 'processing') {
+                    <div class="flex items-center gap-2 mb-3">
+                      <span class="spinner w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></span>
+                      <span class="text-indigo-300 text-sm font-medium">Whisper is analyzing pronunciation...</span>
+                    </div>
+                  } @else if (recordingState() === 'success') {
+                    <div class="w-full text-center">
+                      <div class="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-3">
+                        ✓ Voice Assessment Captured
+                      </div>
+                      
+                      @if (exerciseSpeechTranscribed()) {
+                        <div class="bg-slate-900/50 rounded-xl p-4 mb-4 inline-block max-w-full">
+                          <p class="text-indigo-300 text-xs uppercase tracking-wider font-semibold mb-1">What you said:</p>
+                          <p class="text-white text-base font-medium italic">"{{ exerciseSpeechTranscribed() }}"</p>
+                        </div>
+                      }
+
+                      <!-- Pronunciation Accuracy Details -->
+                      @if (exerciseAccuracyScore() !== null) {
+                        <div class="max-w-md mx-auto bg-slate-950/40 rounded-xl p-4 mb-4">
+                          <div class="flex justify-between items-center text-xs font-semibold text-indigo-300 mb-1.5">
+                            <span>PRONUNCIATION ACCURACY</span>
+                            <span [class]="exerciseAccuracyScore()! >= 75 ? 'text-emerald-400' : 'text-amber-400'">
+                              {{ exerciseAccuracyScore() }}%
+                            </span>
+                          </div>
+                          <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden mb-3">
+                            <div class="h-full rounded-full transition-all duration-500"
+                                 [class]="exerciseAccuracyScore()! >= 75 ? 'bg-emerald-500' : 'bg-amber-500'"
+                                 [style.width.%]="exerciseAccuracyScore()">
+                            </div>
+                          </div>
+
+                          <!-- Word alignment bubbles -->
+                          @if (exerciseWordsFeedback().length > 0) {
+                            <div class="flex flex-wrap gap-2 justify-center mt-3">
+                              @for (word of exerciseWordsFeedback(); track word.word) {
+                                <span class="word-bubble"
+                                      [class.word-bubble--correct]="word.status === 'correct'"
+                                      [class.word-bubble--unclear]="word.status === 'unclear'"
+                                      [class.word-bubble--incorrect]="word.status === 'incorrect'">
+                                  {{ word.word }}
+                                </span>
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <!-- Record Button Trigger -->
+                  @if (recordingState() !== 'processing' && !exerciseChecked()) {
+                    <button (click)="onRecordClick()" 
+                            [class.pulse-red-glow]="recordingState() === 'recording'"
+                            class="mic-trigger-btn flex items-center justify-center gap-2 mt-2 px-6 py-3 rounded-full font-semibold transition-all border">
+                      @if (recordingState() === 'recording') {
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 animate-pulse text-white">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z" />
+                        </svg>
+                        <span class="text-white">Stop and Grade Voice</span>
+                      } @else {
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 text-indigo-300">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                        </svg>
+                        <span class="text-indigo-100">Practice Speaking</span>
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <!-- Hint Slider Toggle -->
+              @if (!exerciseChecked()) {
+                <div class="hint-toggle-panel mb-2">
+                  <button (click)="showHint.set(!showHint())" class="text-sm font-semibold text-indigo-300 hover:text-white transition-colors flex items-center gap-1">
+                    💡 {{ showHint() ? 'Ocultar Pista' : 'Mostrar Pista en Español' }}
+                  </button>
+                  
+                  @if (showHint()) {
+                    <div class="bg-indigo-950/60 border border-indigo-500/25 rounded-xl p-4 mt-3 text-indigo-200 text-sm leading-relaxed animate-fade-in">
+                      {{ activeExercise()!.hint }}
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Grading Results Feedback Panel -->
+              @if (exerciseChecked()) {
+                <div class="feedback-panel border-t border-white/10 pt-4 animate-fade-in">
+                  @if (isExerciseCorrect()) {
+                    <div class="feedback-correct">
+                      <span style="font-size:1.25rem">✨</span>
+                      <div>
+                        <p class="title">¡Excelente respuesta!</p>
+                        <p class="subtitle">Has aplicado correctamente la gramática de la lección.</p>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="feedback-incorrect">
+                      <span style="font-size:1.25rem">⚠️</span>
+                      <div style="flex:1">
+                        <p class="title">Inténtalo de nuevo</p>
+                        <div class="correct-answer-box">
+                          <span style="display:block;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.25rem;color:#94a3b8;font-family:sans-serif">Respuesta Correcta:</span>
+                          {{ activeExercise()!.correct_answer }}
+                        </div>
+                        <p class="subtitle">
+                          <strong>Clave didáctica:</strong> {{ activeExercise()!.hint }}
+                        </p>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="wizard-footer pt-6 border-t border-white/10 flex items-center gap-3 justify-end">
+              @if (!exerciseChecked()) {
+                <button (click)="checkAnswer()" 
+                        [disabled]="userAnswer().trim().length === 0"
+                        class="btn btn--primary px-8 py-3 disabled:opacity-40 disabled:pointer-events-none">
+                  Submit Answer
+                </button>
+              } @else {
+                <button (click)="retryExercise()" class="btn btn--secondary px-6 py-3 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-slate-300">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                  <span>Try Again</span>
+                </button>
+                <button (click)="nextExercise()" class="btn btn--success px-8 py-3">
+                  {{ currentExerciseIndex() + 1 === (practiceSession()?.exercises?.length || 5) ? 'Finish & Summary' : 'Next Exercise →' }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- SUMMARY RESULTS STATE -->
+        @if (practiceState() === 'summary') {
+          <div class="practice-wizard-card p-8 text-center animate-fade-in flex flex-col items-center">
+            
+            <div class="summary-score-glow-ring mb-6 flex items-center justify-center">
+              <div class="score-radial-progress text-indigo-300 font-extrabold text-3xl">
+                {{ correctCount() }} / {{ practiceSession()?.exercises?.length || 5 }}
+              </div>
+            </div>
+
+            <h3 class="text-3xl font-extrabold text-white mb-2">Practice Complete!</h3>
+            <p class="text-indigo-200/60 text-sm mb-6 uppercase tracking-wider font-semibold">
+              Theme: {{ activePracticeTheme() }}
+            </p>
+
+            <div class="bg-indigo-950/40 border border-indigo-500/20 rounded-2xl p-5 mb-8 text-indigo-200 leading-relaxed text-sm max-w-lg">
+              @if (correctCount() === 5) {
+                🏆 <strong>¡Puntuación perfecta!</strong> Has dominado por completo las estructuras del tema <em>"{{ activePracticeTheme() }}"</em> aplicando la gramática a la perfección.
+              } @else if (correctCount() >= 3) {
+                🎉 <strong>¡Excelente trabajo!</strong> Has demostrado una sólida comprensión del tema. Sigue así para pulir los pequeños detalles.
+              } @else {
+                💪 <strong>¡Buen intento!</strong> La práctica constante es la clave para la fluidez. Repasa la gramática y vuelve a intentarlo.
+              }
+            </div>
+
+            <button (click)="closePractice()" class="btn btn--primary px-8 py-3">
+              Return to Lesson
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+  }
 </section>
