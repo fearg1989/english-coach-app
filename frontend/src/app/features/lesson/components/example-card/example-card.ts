@@ -1,7 +1,8 @@
-import { Component, Input, inject, computed } from '@angular/core';
+import { Component, Input, inject, computed, signal, OnDestroy } from '@angular/core';
 
 import { Example } from '../../../../core/models/lesson.model';
 import { SpeechService } from '../../../../core/services/speech.service';
+import { ApiService } from '../../../../core/services/api.service';
 
 @Component({
   selector: 'app-example-card',
@@ -9,10 +10,21 @@ import { SpeechService } from '../../../../core/services/speech.service';
   templateUrl: './example-card.html',
   styleUrl: './example-card.scss',
 })
-export class ExampleCardComponent {
+export class ExampleCardComponent implements OnDestroy {
   @Input({ required: true }) example!: Example;
 
   readonly speechService = inject(SpeechService);
+  readonly apiService = inject(ApiService);
+
+  // --- Phase 3 Pronunciation Assessment State ---
+  readonly recordingState = signal<'idle' | 'recording' | 'processing' | 'success' | 'error'>('idle');
+  readonly evaluationResult = signal<{ transcribed_text: string; accuracy_score: number } | null>(null);
+  readonly errorMessage = signal<string | null>(null);
+  readonly recordingDuration = signal<number>(0);
+
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
+  private timerInterval: any = null;
 
   /**
    * True only when THIS card's phrase is being spoken.
@@ -192,7 +204,119 @@ export class ExampleCardComponent {
 
   /** Phase 3: Will open MediaRecorder, capture audio, send to Whisper STT. */
   onRecordClick(): void {
-    // TODO Phase 3 — activate MediaRecorder and send blob to /api/v1/transcribe
-    console.info('[Phase 3] Audio recording not yet implemented.');
+    if (this.recordingState() === 'recording') {
+      this.stopRecording();
+    } else {
+      this.startRecording();
+    }
+  }
+
+  private startRecording(): void {
+    this.recordingState.set('recording');
+    this.evaluationResult.set(null);
+    this.errorMessage.set(null);
+    this.recordingDuration.set(0);
+    this.audioChunks = [];
+
+    if (typeof window === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      this.errorMessage.set('Tu navegador no soporta la grabación de audio o requiere un contexto seguro (HTTPS).');
+      this.recordingState.set('error');
+      return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((stream) => {
+        this.mediaRecorder = new MediaRecorder(stream);
+        this.mediaRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            this.audioChunks.push(event.data);
+          }
+        };
+
+        this.mediaRecorder.onstop = () => {
+          // Compile standard webm/ogg format chunks into a single Blob
+          const mimeType = this.mediaRecorder?.mimeType || 'audio/webm';
+          const audioBlob = new Blob(this.audioChunks, { type: mimeType });
+          this.sendAudioToBackend(audioBlob);
+        };
+
+        // Start recording
+        this.mediaRecorder.start();
+
+        // Start timer
+        this.timerInterval = setInterval(() => {
+          this.recordingDuration.update((d) => d + 1);
+          // Safety timeout of 15 seconds to prevent extremely large uploads
+          if (this.recordingDuration() >= 15) {
+            this.stopRecording();
+          }
+        }, 1000);
+      })
+      .catch((err) => {
+        console.error('Error accessing microphone:', err);
+        this.errorMessage.set('Acceso al micrófono denegado. Por favor, activa los permisos en tu navegador.');
+        this.recordingState.set('error');
+      });
+  }
+
+  private stopRecording(): void {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+      // Explicitly stop all audio tracks of the stream to turn off microphone usage lights in the browser
+      if (this.mediaRecorder.stream) {
+        this.mediaRecorder.stream.getTracks().forEach((track) => track.stop());
+      }
+    }
+  }
+
+  private sendAudioToBackend(audioBlob: Blob): void {
+    this.recordingState.set('processing');
+
+    const formData = new FormData();
+    // Append the file and specify file name (FastAPI audio endpoint expects standard multipart)
+    formData.append('file', audioBlob, 'recording.webm');
+    formData.append('target_text', this.example.phrase);
+
+    this.apiService.post<{ transcribed_text: string; accuracy_score: number }>('/audio/evaluate-pronunciation', formData)
+      .subscribe({
+        next: (res) => {
+          this.evaluationResult.set(res);
+          this.recordingState.set('success');
+        },
+        error: (err) => {
+          console.error('Pronunciation evaluation failed:', err);
+          let detail = 'Error de conexión con el servidor de evaluación. Verifica tu conexión de red.';
+          if (err.error && err.error.detail) {
+            detail = err.error.detail;
+          }
+          this.errorMessage.set(detail);
+          this.recordingState.set('error');
+        }
+      });
+  }
+
+  resetState(): void {
+    this.recordingState.set('idle');
+    this.evaluationResult.set(null);
+    this.errorMessage.set(null);
+    this.recordingDuration.set(0);
+    this.audioChunks = [];
+  }
+
+  ngOnDestroy(): void {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+    }
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+      if (this.mediaRecorder.stream) {
+        this.mediaRecorder.stream.getTracks().forEach((track) => track.stop());
+      }
+    }
   }
 }

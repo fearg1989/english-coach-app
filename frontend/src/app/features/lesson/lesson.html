@@ -151,7 +151,7 @@
   @if (lesson()!.explanation) {
   <div class="lesson-explanation space-y-4 mb-8">
     <p class="text-base text-slate-600 mb-6 leading-relaxed">
-      @for (segment of parseTextSegments(lesson()!.explanation!.intro); track segment) {
+      @for (segment of parseTextSegments(lesson()!.explanation!.intro); track $index) {
         @if (segment.type === 'bold') {
           <strong class="pedagogy-bold" (click)="speakText(segment.text)">{{ segment.text }}</strong>
         } @else if (segment.type === 'code') {
@@ -177,7 +177,7 @@
         
         @if (section.content) {
         <p class="text-base text-slate-600 leading-relaxed mb-4">
-          @for (segment of parseTextSegments(section.content); track segment) {
+          @for (segment of parseTextSegments(section.content); track $index) {
             @if (segment.type === 'bold') {
               <strong class="pedagogy-bold" (click)="speakText(segment.text)">{{ segment.text }}</strong>
             } @else if (segment.type === 'code') {
@@ -193,7 +193,7 @@
         
         @if (section.layout === 'text') {
         <p>
-          @for (segment of parseTextSegments(section.content || ''); track segment) {
+          @for (segment of parseTextSegments(section.content || ''); track $index) {
             @if (segment.type === 'bold') {
               <strong class="pedagogy-bold" (click)="speakText(segment.text)">{{ segment.text }}</strong>
             } @else if (segment.type === 'code') {
@@ -211,7 +211,7 @@
         <ul class="list-disc pl-5 space-y-2">
           @for (item of section.items; track item) {
           <li>
-            @for (segment of parseTextSegments(item); track segment) {
+            @for (segment of parseTextSegments(item); track $index) {
               @if (segment.type === 'bold') {
                 <strong class="pedagogy-bold" (click)="speakText(segment.text)">{{ segment.text }}</strong>
               } @else if (segment.type === 'code') {
@@ -232,7 +232,7 @@
           @for (item of section.items; track item) {
             @let gridData = splitGridItem(item);
             <div class="didactic-grid__card group cursor-pointer" (click)="speakText(gridData.main)">
-              @for (segment of parseTextSegments(gridData.main); track segment) {
+              @for (segment of parseTextSegments(gridData.main); track $index) {
                 @if (segment.type === 'bold') {
                   <span class="didactic-grid__number group-hover:scale-110 transition-transform duration-200">{{ segment.text }}</span>
                 } @else {
@@ -264,7 +264,7 @@
             <div class="didactic-card {{ semanticClass }}" (click)="speakText(card.example || card.title)">
               <div>
                 <span class="didactic-card__badge">
-                  @for (seg of parseTextSegments(card.title); track seg) {
+                  @for (seg of parseTextSegments(card.title); track $index) {
                     @if (seg.type === 'bold') {
                       <strong>{{ seg.text }}</strong>
                     } @else {
@@ -275,7 +275,7 @@
                 
                 @if (card.formula) {
                   <div class="didactic-card__formula">
-                    @for (seg of parseTextSegments(card.formula); track seg) {
+                    @for (seg of parseTextSegments(card.formula); track $index) {
                       @if (seg.type === 'bold') {
                         <strong class="text-indigo-600 font-extrabold">{{ seg.text }}</strong>
                       } @else if (seg.type === 'code') {
@@ -290,7 +290,7 @@
               
               @if (card.example) {
                 <div class="didactic-card__example">
-                  @for (seg of parseTextSegments(card.example); track seg) {
+                  @for (seg of parseTextSegments(card.example); track $index) {
                     @if (seg.type === 'bold') {
                       <strong class="text-slate-900 font-extrabold">{{ seg.text }}</strong>
                     } @else if (seg.type === 'code') {
@@ -322,7 +322,7 @@
                 @for (cell of row; track cell; let cellIndex = $index) {
                 <td class="p-4 text-slate-900 font-medium align-top border-l border-slate-100 first:border-l-0 table-cell-interactive" (click)="speakTableCell(cell, cellIndex, section.headers || [], row)">
                   <span class="inline-flex flex-wrap items-center gap-1">
-                    @for (segment of parseTextSegments(cell); track segment) {
+                    @for (segment of parseTextSegments(cell); track $index) {
                       @if (segment.type === 'bold') {
                         <strong class="pedagogy-bold" (click)="speakText(segment.text)">{{ segment.text }}</strong>
                       } @else if (segment.type === 'code') {
@@ -378,7 +378,7 @@
               <div class="p-4 border-t border-slate-100 bg-white space-y-4">
                 @if (sub.content) {
                   <p class="text-sm text-slate-600 leading-relaxed mb-2">
-                    @for (segment of parseTextSegments(sub.content); track segment) {
+                    @for (segment of parseTextSegments(sub.content); track $index) {
                       @if (segment.type === 'bold') {
                         <strong class="pedagogy-bold" (click)="speakText(segment.text)">{{ segment.text }}</strong>
                       } @else if (segment.type === 'code') {
@@ -394,7 +394,7 @@
                 
                 @if (sub.layout === 'text') {
                   <p class="text-sm text-slate-600 leading-relaxed">
-                    @for (segment of parseTextSegments(sub.content || ''); track segment) {
+                    @for (segment of parseTextSegments(sub.content || ''); track $index) {
                       @if (segment.type === 'bold') {
                         <strong class="pedagogy-bold" (click)="speakText(segment.text)">{{ segment.text }}</strong>
                       } @else if (segment.type === 'code') {
@@ -418,7 +418,7 @@
                           </svg>
                         </span>
                         <span class="text-slate-700 text-sm leading-relaxed">
-                          @for (segment of parseTextSegments(item); track segment) {
+                          @for (segment of parseTextSegments(item); track $index) {
                             @if (segment.type === 'bold') {
                               <strong class="pedagogy-bold" (click)="speakText(segment.text)">{{ segment.text }}</strong>
                             } @else if (segment.type === 'code') {
@@ -440,7 +440,7 @@
                     @for (item of sub.items; track item) {
                       @let gridData = splitGridItem(item);
                       <div class="didactic-grid__card group cursor-pointer" (click)="speakText(gridData.main)">
-                        @for (segment of parseTextSegments(gridData.main); track segment) {
+                        @for (segment of parseTextSegments(gridData.main); track $index) {
                           @if (segment.type === 'bold') {
                             <span class="didactic-grid__number group-hover:scale-110 transition-transform duration-200">{{ segment.text }}</span>
                           } @else {
@@ -472,7 +472,7 @@
                       <div class="didactic-card {{ semanticClass }}" (click)="speakText(card.example || card.title)">
                         <div>
                           <span class="didactic-card__badge">
-                            @for (seg of parseTextSegments(card.title); track seg) {
+                            @for (seg of parseTextSegments(card.title); track $index) {
                               @if (seg.type === 'bold') {
                                 <strong>{{ seg.text }}</strong>
                               } @else {
@@ -483,7 +483,7 @@
                           
                           @if (card.formula) {
                             <div class="didactic-card__formula">
-                              @for (seg of parseTextSegments(card.formula); track seg) {
+                              @for (seg of parseTextSegments(card.formula); track $index) {
                                 @if (seg.type === 'bold') {
                                   <strong class="text-indigo-600 font-extrabold">{{ seg.text }}</strong>
                                 } @else if (seg.type === 'code') {
@@ -498,7 +498,7 @@
                         
                         @if (card.example) {
                           <div class="didactic-card__example">
-                            @for (seg of parseTextSegments(card.example); track seg) {
+                            @for (seg of parseTextSegments(card.example); track $index) {
                               @if (seg.type === 'bold') {
                                 <strong class="text-slate-900 font-extrabold">{{ seg.text }}</strong>
                               } @else if (seg.type === 'code') {
@@ -530,7 +530,7 @@
                             @for (cell of row; track cell; let first = $first; let cellIndex = $index) {
                               <td [class]="'p-4 align-top border-l border-slate-100 first:border-l-0 text-slate-700 table-cell-interactive' + (first ? ' text-slate-900 font-semibold' : '')" (click)="speakTableCell(cell, cellIndex, sub.headers || [], row)">
                                 <span class="inline-flex flex-wrap items-center gap-1">
-                                  @for (segment of parseTextSegments(cell); track segment) {
+                                  @for (segment of parseTextSegments(cell); track $index) {
                                     @if (segment.type === 'bold') {
                                       <strong class="pedagogy-bold" (click)="speakText(segment.text)">{{ segment.text }}</strong>
                                     } @else if (segment.type === 'code') {

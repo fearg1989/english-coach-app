@@ -257,3 +257,243 @@
     font-size: 1.1rem;
   }
 }
+
+// ─── Recording State & Pulses ───────────────────────────────────────────────
+.recording-pulse {
+  width: 8px;
+  height: 8px;
+  background: var(--color-error, #dc2626);
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse-recording 1s infinite alternate;
+  margin-right: 0.25rem;
+}
+
+@keyframes pulse-recording {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 1;
+    box-shadow: 0 0 8px var(--color-error, #dc2626);
+  }
+}
+
+.spinner--xs {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+
+// ─── Pronunciation Evaluation Result Panel ─────────────────────────────────
+.pronunciation-result {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: #f8fafc;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02);
+  animation: slide-down 0.25s ease-out;
+
+  // Score range modifications
+  &--excellent {
+    background: rgba(34, 197, 94, 0.03);
+    border-color: rgba(34, 197, 94, 0.2);
+    
+    .pronunciation-result__score-badge {
+      background: rgba(34, 197, 94, 0.1);
+      color: #15803d;
+      border: 1px solid rgba(34, 197, 94, 0.25);
+    }
+  }
+
+  &--good {
+    background: rgba(234, 179, 8, 0.03);
+    border-color: rgba(234, 179, 8, 0.2);
+
+    .pronunciation-result__score-badge {
+      background: rgba(234, 179, 8, 0.1);
+      color: #a16207;
+      border: 1px solid rgba(234, 179, 8, 0.25);
+    }
+  }
+
+  &--retry {
+    background: rgba(239, 68, 68, 0.03);
+    border-color: rgba(239, 68, 68, 0.2);
+
+    .pronunciation-result__score-badge {
+      background: rgba(239, 68, 68, 0.1);
+      color: #b91c1c;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pronunciation-result__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.pronunciation-result__score-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.pronunciation-result__score-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.pronunciation-result__feedback-msg {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.pronunciation-result__close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    color: #475569;
+    background: rgba(148, 163, 184, 0.12);
+  }
+}
+
+.pronunciation-result__details {
+  padding-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pronunciation-result__comparison {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+
+  @media (min-width: 640px) {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+}
+
+.comparison-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.comparison-block__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.comparison-block__text {
+  font-size: 0.875rem;
+  margin: 0;
+  line-height: 1.4;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.pronunciation-result__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pronunciation-result__retry-btn {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  gap: 0.3rem;
+  border-radius: 6px;
+  color: #4f46e5;
+  border-color: rgba(79, 70, 229, 0.2);
+  background: rgba(79, 70, 229, 0.03);
+
+  &:hover {
+    background: rgba(79, 70, 229, 0.08);
+  }
+  
+  svg {
+    width: 14px;
+    height: 14px;
+    margin-right: 0.25rem;
+  }
+}
+
+// ─── Recording Error Panel ──────────────────────────────────────────────────
+.pronunciation-error-panel {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: #fff5f5;
+  border: 1px solid #fee2e2;
+  color: #c53030;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  animation: slide-down 0.25s ease-out;
+
+  .btn {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    border-radius: 6px;
+    background: white;
+    color: #c53030;
+    border-color: #fca5a5;
+
+    &:hover {
+      background: #fff5f5;
+    }
+  }
+}
+
+.pronunciation-error-panel__content {
+  display: flex;
+  align-items: center;
+}
