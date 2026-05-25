@@ -1,9 +1,10 @@
 export interface PracticeExercise {
   id: number;
-  type: 'fill_in_the_blank' | 'roleplay_response';
+  type: 'fill_in_the_blank' | 'roleplay_response' | 'multiple_choice' | 'translation' | 'open_writing';
   prompt: string;
   correct_answer: string;
   hint: string;
+  options?: string[] | null;  // Only present for multiple_choice
 }
 
 export interface PracticeSession {

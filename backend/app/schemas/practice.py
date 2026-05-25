@@ -11,12 +11,20 @@ class PracticeGenerateRequest(BaseModel):
 class ExerciseItemSchema(BaseModel):
     """Schema representing a single dynamically generated practice exercise."""
     id: int = Field(..., description="1-based index of the exercise.")
-    type: Literal["fill_in_the_blank", "roleplay_response"] = Field(
-        ..., description="The exercise type: fill_in_the_blank or roleplay_response."
-    )
-    prompt: str = Field(..., description="The prompt or conversation line shown to the user in English.")
-    correct_answer: str = Field(..., description="The exact correct answer targeted in English.")
+    type: Literal[
+        "fill_in_the_blank",
+        "roleplay_response",
+        "multiple_choice",
+        "translation",
+        "open_writing",
+    ] = Field(..., description="The exercise type.")
+    prompt: str = Field(..., description="The prompt or instruction shown to the user.")
+    correct_answer: str = Field(..., description="The exact correct answer in English.")
     hint: str = Field(..., description="A brief grammatical hint or clue in Spanish.")
+    options: list[str] | None = Field(
+        default=None,
+        description="List of 4 answer options (A/B/C/D) for multiple_choice exercises only."
+    )
 
 
 class PracticeSessionResponseSchema(BaseModel):

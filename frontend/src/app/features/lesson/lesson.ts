@@ -49,6 +49,7 @@ export class LessonComponent implements OnInit, OnDestroy {
   readonly currentExerciseIndex = signal<number>(0);
   readonly showHint = signal<boolean>(false);
   readonly userAnswer = signal<string>('');
+  readonly selectedOption = signal<string | null>(null);  // For multiple_choice exercises
   readonly isEvaluating = signal<boolean>(false);
 
   // Exercise verification feedback states
@@ -359,6 +360,7 @@ export class LessonComponent implements OnInit, OnDestroy {
 
   resetExerciseStates(): void {
     this.userAnswer.set('');
+    this.selectedOption.set(null);
     this.showHint.set(false);
     this.exerciseChecked.set(false);
     this.isExerciseCorrect.set(false);
@@ -369,21 +371,56 @@ export class LessonComponent implements OnInit, OnDestroy {
     this.interimTranscript.set('');
   }
 
+  /** Handles option click for multiple_choice exercises */
+  selectOption(option: string): void {
+    if (this.exerciseChecked()) return;  // Don't allow changing after submission
+    this.selectedOption.set(option);
+    this.userAnswer.set(option);
+  }
+
   checkAnswer(): void {
     const exercise = this.activeExercise();
     if (!exercise) return;
 
-    const typedAnswer = this.userAnswer().trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"");
-    const targetAnswer = exercise.correct_answer.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"");
-
     this.exerciseChecked.set(true);
 
-    if (typedAnswer === targetAnswer || targetAnswer.includes(typedAnswer) && typedAnswer.length > 2) {
-      this.isExerciseCorrect.set(true);
-      this.correctCount.update(c => c + 1);
-    } else {
-      this.isExerciseCorrect.set(false);
+    const normalize = (s: string) =>
+      s.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, '').replace(/\s+/g, ' ');
+
+    if (exercise.type === 'multiple_choice') {
+      // Exact match against selected option
+      const selected = this.selectedOption();
+      const correct = normalize(exercise.correct_answer);
+      const isCorrect = !!selected && normalize(selected) === correct;
+      this.isExerciseCorrect.set(isCorrect);
+      if (isCorrect) this.correctCount.update(c => c + 1);
+      return;
     }
+
+    const typedAnswer = normalize(this.userAnswer());
+    const targetAnswer = normalize(exercise.correct_answer);
+
+    if (exercise.type === 'open_writing' || exercise.type === 'translation') {
+      // Flexible matching: accept if typed includes all key words from target
+      // or if the target includes the typed text (when typed is long enough)
+      const typedWords = typedAnswer.split(' ').filter(w => w.length > 2);
+      const targetWords = targetAnswer.split(' ').filter(w => w.length > 2);
+      const matchCount = typedWords.filter(w => targetWords.includes(w)).length;
+      const matchRatio = targetWords.length > 0 ? matchCount / targetWords.length : 0;
+      // Accept if 70%+ of key words match, or if typed is basically the same
+      const isCorrect = typedAnswer === targetAnswer ||
+                        matchRatio >= 0.7 ||
+                        (targetAnswer.includes(typedAnswer) && typedAnswer.length > 4);
+      this.isExerciseCorrect.set(isCorrect);
+      if (isCorrect) this.correctCount.update(c => c + 1);
+      return;
+    }
+
+    // Default: fill_in_the_blank & roleplay_response — exact / includes match
+    const isCorrect = typedAnswer === targetAnswer ||
+                      (targetAnswer.includes(typedAnswer) && typedAnswer.length > 2);
+    this.isExerciseCorrect.set(isCorrect);
+    if (isCorrect) this.correctCount.update(c => c + 1);
   }
 
   onRecordClick(): void {

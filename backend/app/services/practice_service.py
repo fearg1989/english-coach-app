@@ -16,6 +16,8 @@ class PracticeService:
     """
     Service responsible for constructing dynamic, context-aware practice sessions
     by querying Ollama with custom themes and grammar contexts, and validating the results.
+    Now supports 5 exercise types: fill_in_the_blank, roleplay_response, multiple_choice,
+    translation, and open_writing.
     """
 
     def __init__(self, db: Session) -> None:
@@ -28,7 +30,7 @@ class PracticeService:
         """
         Retrieves lesson context, merges it with the custom theme, builds a strict JSON prompt,
         queries the local Ollama instance with JSON format enforcement, validates the schema,
-        and returns the parsed practice session.
+        and returns the parsed practice session with a variety of exercise types.
         """
         # 1. Fetch lesson details to verify existence and grab context
         lesson = self._lesson_service.get_lesson_detail(lesson_id)
@@ -42,11 +44,11 @@ class PracticeService:
 
         # 2. Local Safety keyword shield to catch blatant inappropriate terms instantly
         blacklist = [
-            "sexo", "pornografía", "porno", "porn", "hentai", "droga", "cocaina", "marihuana", 
-            "asesinar", "violencia", "matar", "violación", "cigarro", "armas", "narco", 
-            "cartel", "hackear", "hacking", "stealing", "steal", "robbery", "rob", "murder", 
-            "bomb", "terrorist", "suicide", "prostitución", "prostitutes", "whore", "fuck", 
-            "shit", "assault", "vulgar", "ilegal", "illegal", "prostituta", "drogas", 
+            "sexo", "pornografía", "porno", "porn", "hentai", "droga", "cocaina", "marihuana",
+            "asesinar", "violencia", "matar", "violación", "cigarro", "armas", "narco",
+            "cartel", "hackear", "hacking", "stealing", "steal", "robbery", "rob", "murder",
+            "bomb", "terrorist", "suicide", "prostitución", "prostitutes", "whore", "fuck",
+            "shit", "assault", "vulgar", "ilegal", "illegal", "prostituta", "drogas",
             "cocaine", "marijuana", "weapons", "gun", "guns", "assassinate", "prostitute"
         ]
         theme_lower = theme.lower().strip()
@@ -57,43 +59,78 @@ class PracticeService:
                 detail="El tema sugerido contiene términos vulgares, inapropiados o ilegales. Por favor, escribe un tema apto para el aprendizaje educativo."
             )
 
-        # 3. Build the strict prompt enforcing JSON payload structure and safety checks
+        # 3. Build the strict prompt enforcing JSON payload structure and all 5 exercise types
         system_prompt = (
             "You are an expert English Language Coach and Curriculum Developer.\n"
-            "Your task is to generate a dynamic, structured set of practice exercises.\n"
-            "You must output a single, raw, valid JSON object matching the requested schema. "
-            "Do NOT wrap it in markdown block tags, do NOT use ```json or ```, and do NOT add any conversational explanation, intro, or outro.\n\n"
-            "The JSON schema you must strictly follow is:\n"
+            "Your task is to generate a dynamic, structured practice session with 5 exercises of DIFFERENT types.\n"
+            "You must output a single, raw, valid JSON object matching the schema below. "
+            "Do NOT wrap it in markdown, do NOT use ```json or ```, do NOT add any explanation.\n\n"
+            "The JSON schema you must strictly follow:\n"
             "{\n"
-            '  "session_id": "string (UUID)",\n'
-            '  "theme": "string (The theme provided by the user)",\n'
-            '  "grammar_focus": "string (Grammar focus and level code, e.g. Verb To Be (A1))",\n'
+            '  "session_id": "string (UUID v4)",\n'
+            '  "theme": "string",\n'
+            '  "grammar_focus": "string",\n'
             '  "exercises": [\n'
             "    {\n"
-            '      "id": 1,\n'
-            '      "type": "fill_in_the_blank" | "roleplay_response",\n'
-            '      "prompt": "string (complete instruction or developer dialogue context in English)",\n'
-            '      "correct_answer": "string (the exact answer targeted in English)",\n'
-            '      "hint": "string (a helpful tip about the correct grammatical verb form/marker in Spanish)"\n'
+            '      "id": number,\n'
+            '      "type": "fill_in_the_blank" | "roleplay_response" | "multiple_choice" | "translation" | "open_writing",\n'
+            '      "prompt": "string",\n'
+            '      "correct_answer": "string",\n'
+            '      "hint": "string (in Spanish)",\n'
+            '      "options": ["string", "string", "string", "string"] or null\n'
             "    }\n"
             "  ],\n"
             '  "is_rejected": boolean,\n'
             '  "rejection_reason": "string or null"\n'
             "}\n\n"
             "CRITICAL SAFETY DIRECTIVE:\n"
-            "If the requested theme is illegal, vulgar, offensive, sexually explicit, violent, related to weapons/drugs, or highly inappropriate for an educational tool, you MUST reject it by setting 'is_rejected' to true, and providing a polite explanation in Spanish in 'rejection_reason' explaining why we cannot practice this topic (e.g., 'El tema sugerido no es apto para un contexto educativo de aprendizaje. Por favor, elige otra temática.'). In this case, leave the 'exercises' list completely empty.\n\n"
-            "Key generation rules if the theme is safe:\n"
-            "1. Generate exactly 5 diverse and engaging exercises.\n"
-            f"2. The grammar_focus is: {grammar_title} ({level_code}). You MUST construct sentences targeting this exact grammar topic at this CEFR proficiency level.\n"
-            f"3. The theme is: {theme}. The prompts, scenarios, vocabulary, and dialogues of every exercise must revolve around this theme (e.g., if theme is Software Development, write about pipelines, coding, deployment conversations).\n"
-            "4. The prompts, dialogue contents, and correct answers must be entirely in English.\n"
-            "5. The 'hint' field must be in Spanish, offering a helpful pedagogical clue about how to solve the exercise.\n"
-            "6. For 'fill_in_the_blank', always prefix the 'prompt' with a clear instruction in Spanish explaining what grammar target to use, followed by the English sentence containing a '___' blank (e.g., 'Completa la frase con la forma correcta de 'to be': The movie ___ very long.').\n"
-            "7. For 'roleplay_response', always prefix the 'prompt' with a clear, engaging roleplay context in Spanish explaining who speaks and what they ask, followed by the English dialogue prompt (e.g., 'El reclutador te pregunta en tu entrevista de trabajo: 'Who is the lead dev?'. Responde diciendo afirmativamente que tú eres el desarrollador principal:')."
+            "If the requested theme is illegal, vulgar, offensive, sexually explicit, violent, or inappropriate "
+            "for an educational tool, set 'is_rejected' to true, provide a polite explanation in Spanish in "
+            "'rejection_reason', and leave 'exercises' completely empty.\n\n"
+            "EXERCISE GENERATION RULES (only if theme is safe):\n"
+            f"1. GRAMMAR FOCUS: {grammar_title} ({level_code}). Every exercise MUST practice this exact grammar at this CEFR level.\n"
+            f"2. THEME: {theme}. All prompts, scenarios, and vocabulary must revolve around this theme.\n"
+            "3. Generate exactly 5 exercises, ONE of each type, in this ORDER:\n"
+            "   - Exercise 1: type='fill_in_the_blank'\n"
+            "   - Exercise 2: type='multiple_choice'\n"
+            "   - Exercise 3: type='translation'\n"
+            "   - Exercise 4: type='open_writing'\n"
+            "   - Exercise 5: type='roleplay_response'\n"
+            "4. Rules per exercise type:\n\n"
+            "   FILL_IN_THE_BLANK:\n"
+            "   - 'prompt': Start with a brief instruction in Spanish (e.g. 'Completa con la forma correcta del verbo to be:'), "
+            "then write the English sentence with a '___' blank.\n"
+            "   - 'correct_answer': The single word or short phrase that fills the blank.\n"
+            "   - 'options': null (no options needed).\n\n"
+            "   MULTIPLE_CHOICE:\n"
+            "   - 'prompt': Start with a brief instruction in Spanish (e.g. 'Elige la opción correcta:'), "
+            "then write the English sentence or question.\n"
+            "   - 'correct_answer': The exact text of the correct option (must match one of the 4 options exactly).\n"
+            "   - 'options': A JSON array of exactly 4 strings — the 4 answer choices. "
+            "Only one must be correct. Make the distractors plausible but clearly wrong grammatically.\n\n"
+            "   TRANSLATION:\n"
+            "   - 'prompt': Start with 'Traduce al inglés la siguiente frase:', then write a complete sentence in SPANISH "
+            "that the student must translate to English, applying the grammar focus.\n"
+            "   - 'correct_answer': The correct English translation of the Spanish sentence.\n"
+            "   - 'options': null.\n\n"
+            "   OPEN_WRITING:\n"
+            "   - 'prompt': Start with a creative writing instruction in Spanish, "
+            "asking the student to write a COMPLETE original sentence in English about the theme, using the grammar focus. "
+            "Example: 'Escribe en inglés una frase completa describiendo tu película favorita usando el verbo to be:'.\n"
+            "   - 'correct_answer': A model answer in English (a valid example sentence) that the student's response will be compared against.\n"
+            "   - 'options': null.\n\n"
+            "   ROLEPLAY_RESPONSE:\n"
+            "   - 'prompt': Describe a roleplay scenario in Spanish, then write the English dialogue line the student must respond to. "
+            "Example: 'El director de cine te pregunta: \"Who is the main character?\" Responde en inglés usando el verbo to be:'\n"
+            "   - 'correct_answer': A valid English response sentence using the grammar focus.\n"
+            "   - 'options': null.\n\n"
+            "5. The 'hint' field for every exercise must be in Spanish, offering a pedagogical tip about the grammar rule to apply.\n"
+            "6. All prompts, correct_answers, and options content must be relevant to both the GRAMMAR FOCUS and the THEME."
         )
 
         user_prompt = (
-            f"Generate a 5-question English practice session. "
+            f"Generate a 5-exercise English practice session with one of each type: "
+            f"fill_in_the_blank, multiple_choice, translation, open_writing, roleplay_response. "
             f"Grammar topic: {grammar_title} ({level_code}). Theme: {theme}."
         )
 
@@ -109,9 +146,9 @@ class PracticeService:
 
         # 4. Call the local Ollama instance with timeout
         try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(90.0)) as client:
                 response = await client.post(f"{self.base_url}/api/chat", json=payload)
-                
+
                 if response.status_code != 200:
                     error_detail = response.text
                     logger.error(f"Ollama API error: {response.status_code} - {error_detail}")
@@ -132,9 +169,7 @@ class PracticeService:
 
                 # 5. Clean and parse JSON
                 try:
-                    # In case Ollama wrapped JSON in ```json or markdown block tags despite instructions
                     if raw_content.startswith("```"):
-                        # Extract JSON content between ```json and ```
                         lines = raw_content.splitlines()
                         if lines[0].startswith("```"):
                             lines = lines[1:]
@@ -167,6 +202,13 @@ class PracticeService:
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=rejection_reason
                     )
+
+                # Ensure multiple_choice exercises have valid options list
+                for ex in parsed_json.get("exercises", []):
+                    if ex.get("type") == "multiple_choice":
+                        options = ex.get("options")
+                        if not options or not isinstance(options, list) or len(options) < 2:
+                            logger.warning(f"Exercise {ex.get('id')} is multiple_choice but has invalid options: {options}. Skipping options validation.")
 
                 # 6. Validate utilizing Pydantic schema
                 try:

@@ -750,15 +750,26 @@
 
             <!-- Body / Active Exercise -->
             <div class="wizard-body py-4 flex-1 flex flex-col gap-5">
+
+              <!-- Exercise Type Badge -->
+
               <div class="exercise-type-tag">
-                @if (activeExercise()!.type === 'fill_in_the_blank') {
-                  <span class="inline-flex items-center gap-1.5 text-cyan-400 text-xs font-bold uppercase tracking-widest">
-                    🔤 Fill in the Blank
-                  </span>
-                } @else {
-                  <span class="inline-flex items-center gap-1.5 text-violet-400 text-xs font-bold uppercase tracking-widest">
-                    💬 Roleplay Dialogue
-                  </span>
+                @switch (activeExercise()!.type) {
+                  @case ('fill_in_the_blank') {
+                    <span class="ex-type-badge ex-type-badge--fill">🔤 Fill in the Blank</span>
+                  }
+                  @case ('multiple_choice') {
+                    <span class="ex-type-badge ex-type-badge--choice">🎯 Multiple Choice</span>
+                  }
+                  @case ('translation') {
+                    <span class="ex-type-badge ex-type-badge--translation">🌐 Translation</span>
+                  }
+                  @case ('open_writing') {
+                    <span class="ex-type-badge ex-type-badge--writing">✍️ Open Writing</span>
+                  }
+                  @case ('roleplay_response') {
+                    <span class="ex-type-badge ex-type-badge--roleplay">💬 Roleplay Dialogue</span>
+                  }
                 }
               </div>
 
@@ -767,7 +778,6 @@
                 <p class="text-white text-lg font-medium leading-relaxed pr-10">
                   {{ activeExercise()!.prompt }}
                 </p>
-                
                 <!-- Speak prompt button -->
                 <button (click)="speakText(activeExercise()!.prompt)" class="absolute right-4 top-5 p-2 rounded-full hover:bg-white/10 text-indigo-300 hover:text-indigo-200 transition-colors" title="Hear prompt">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
@@ -776,112 +786,216 @@
                 </button>
               </div>
 
-              <!-- User Response Area -->
-              <div class="user-response-panel mb-2">
-                
-                <!-- Answer Input Field -->
-                @if (recordingState() !== 'recording' && recordingState() !== 'processing' && recordingState() !== 'success') {
-                  <div class="relative mb-4">
-                    <input type="text" 
-                           [value]="userAnswer()" 
-                           (input)="userAnswer.set($any($event.target).value)"
-                           [disabled]="exerciseChecked()"
-                           placeholder="Type your English answer here..."
-                           class="w-full bg-slate-950/60 border border-slate-700/60 text-white rounded-xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-base placeholder-indigo-200/30 disabled:opacity-50"
-                           (keyup.enter)="!exerciseChecked() && userAnswer().trim().length > 0 && checkAnswer()" />
+              <!-- ═══ USER RESPONSE AREA — switches by exercise type ═══ -->
+              @switch (activeExercise()!.type) {
+
+                <!-- ─ MULTIPLE CHOICE ─ -->
+                @case ('multiple_choice') {
+                  <div class="multiple-choice-grid">
+                    @for (option of activeExercise()!.options || []; track option; let i = $index) {
+                      <button class="choice-btn"
+                              [class.choice-btn--selected]="selectedOption() === option && !exerciseChecked()"
+                              [class.choice-btn--correct]="exerciseChecked() && option === activeExercise()!.correct_answer"
+                              [class.choice-btn--wrong]="exerciseChecked() && selectedOption() === option && option !== activeExercise()!.correct_answer"
+                              [disabled]="exerciseChecked()"
+                              (click)="selectOption(option)">
+                        <span class="choice-letter">{{ ['A', 'B', 'C', 'D'][i] }}</span>
+                        <span class="choice-text">{{ option }}</span>
+                        @if (exerciseChecked() && option === activeExercise()!.correct_answer) {
+                          <span class="choice-icon">✓</span>
+                        }
+                        @if (exerciseChecked() && selectedOption() === option && option !== activeExercise()!.correct_answer) {
+                          <span class="choice-icon choice-icon--wrong">✗</span>
+                        }
+                      </button>
+                    }
                   </div>
                 }
 
-                <!-- Mic/Speech Recording Section -->
-                <div class="speech-recording-area flex flex-col items-center py-4 bg-white/5 border border-white/5 rounded-2xl p-6">
-                  
-                  @if (recordingState() === 'recording') {
-                    <div class="recording-visualizer flex items-center justify-center gap-1.5 mb-4 h-8">
-                      <span class="bar animate-pulse-bar-1"></span>
-                      <span class="bar animate-pulse-bar-2"></span>
-                      <span class="bar animate-pulse-bar-3"></span>
-                      <span class="bar animate-pulse-bar-4"></span>
-                    </div>
-                    <p class="text-red-400 text-sm font-semibold mb-1 animate-pulse flex items-center gap-1.5">
-                      🔴 Recording Speech (0:{{ recordingDuration() < 10 ? '0' : '' }}{{ recordingDuration() }})
-                    </p>
-                    @if (interimTranscript()) {
-                      <p class="text-indigo-200 text-xs italic mt-2 bg-slate-900/40 px-3 py-1.5 rounded-lg max-w-full text-center">
-                        "{{ interimTranscript() }}"
-                      </p>
-                    }
-                  } @else if (recordingState() === 'processing') {
-                    <div class="flex items-center gap-2 mb-3">
-                      <span class="spinner w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></span>
-                      <span class="text-indigo-300 text-sm font-medium">Whisper is analyzing pronunciation...</span>
-                    </div>
-                  } @else if (recordingState() === 'success') {
-                    <div class="w-full text-center">
-                      <div class="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-3">
-                        ✓ Voice Assessment Captured
-                      </div>
-                      
-                      @if (exerciseSpeechTranscribed()) {
-                        <div class="bg-slate-900/50 rounded-xl p-4 mb-4 inline-block max-w-full">
-                          <p class="text-indigo-300 text-xs uppercase tracking-wider font-semibold mb-1">What you said:</p>
-                          <p class="text-white text-base font-medium italic">"{{ exerciseSpeechTranscribed() }}"</p>
+                <!-- ─ TRANSLATION ─ -->
+                @case ('translation') {
+                  <div class="translation-area">
+                    <label class="translation-label">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:1rem;height:1rem">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
+                      </svg>
+                      Escribe tu traducción al inglés:
+                    </label>
+                    <textarea class="translation-textarea"
+                              [value]="userAnswer()"
+                              (input)="userAnswer.set($any($event.target).value)"
+                              [disabled]="exerciseChecked()"
+                              placeholder="Type your English translation here..."
+                              rows="3"></textarea>
+                    <!-- Mic option for translation -->
+                    <div class="speech-recording-area flex flex-col items-center py-3 bg-white/5 border border-white/5 rounded-xl mt-2">
+                      @if (recordingState() === 'recording') {
+                        <div class="recording-visualizer flex items-center justify-center gap-1.5 mb-3 h-7">
+                          <span class="bar animate-pulse-bar-1"></span>
+                          <span class="bar animate-pulse-bar-2"></span>
+                          <span class="bar animate-pulse-bar-3"></span>
+                          <span class="bar animate-pulse-bar-4"></span>
                         </div>
+                        <p class="text-red-400 text-sm font-semibold mb-1 animate-pulse">
+                          🔴 Grabando (0:{{ recordingDuration() < 10 ? '0' : '' }}{{ recordingDuration() }})
+                        </p>
+                      } @else if (recordingState() === 'processing') {
+                        <div class="flex items-center gap-2">
+                          <span class="spinner w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></span>
+                          <span class="text-indigo-300 text-sm">Analizando...</span>
+                        </div>
+                      } @else if (recordingState() === 'success') {
+                        <p class="text-emerald-400 text-xs font-semibold">✓ Voz capturada — revisada arriba</p>
                       }
+                      @if (recordingState() !== 'processing' && !exerciseChecked()) {
+                        <button (click)="onRecordClick()"
+                                [class.pulse-red-glow]="recordingState() === 'recording'"
+                                class="mic-trigger-btn flex items-center justify-center gap-2 mt-2 px-5 py-2.5 rounded-full font-semibold transition-all border text-sm">
+                          @if (recordingState() === 'recording') {
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 animate-pulse text-white">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z" />
+                            </svg>
+                            <span class="text-white">Stop</span>
+                          } @else {
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-indigo-300">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                            </svg>
+                            <span class="text-indigo-100">Dictar respuesta</span>
+                          }
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
 
-                      <!-- Pronunciation Accuracy Details -->
-                      @if (exerciseAccuracyScore() !== null) {
-                        <div class="max-w-md mx-auto bg-slate-950/40 rounded-xl p-4 mb-4">
-                          <div class="flex justify-between items-center text-xs font-semibold text-indigo-300 mb-1.5">
-                            <span>PRONUNCIATION ACCURACY</span>
-                            <span [class]="exerciseAccuracyScore()! >= 75 ? 'text-emerald-400' : 'text-amber-400'">
-                              {{ exerciseAccuracyScore() }}%
-                            </span>
+                <!-- ─ OPEN WRITING ─ -->
+                @case ('open_writing') {
+                  <div class="translation-area">
+                    <label class="translation-label">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:1rem;height:1rem">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                      </svg>
+                      Escribe tu respuesta en inglés:
+                    </label>
+                    <textarea class="translation-textarea"
+                              [value]="userAnswer()"
+                              (input)="userAnswer.set($any($event.target).value)"
+                              [disabled]="exerciseChecked()"
+                              placeholder="Write a complete sentence in English..."
+                              rows="3"></textarea>
+                    @if (exerciseChecked() && isExerciseCorrect()) {
+                      <div class="example-answer-box">
+                        <span class="example-answer-label">Respuesta modelo:</span>
+                        <span>{{ activeExercise()!.correct_answer }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- ─ FILL IN THE BLANK & ROLEPLAY ─ (default: text input + mic) -->
+                @default {
+                  <div class="user-response-panel mb-2">
+                    <!-- Text Input -->
+                    @if (recordingState() !== 'recording' && recordingState() !== 'processing' && recordingState() !== 'success') {
+                      <div class="relative mb-4">
+                        <input type="text"
+                               [value]="userAnswer()"
+                               (input)="userAnswer.set($any($event.target).value)"
+                               [disabled]="exerciseChecked()"
+                               placeholder="Type your English answer here..."
+                               class="w-full bg-slate-950/60 border border-slate-700/60 text-white rounded-xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-base placeholder-indigo-200/30 disabled:opacity-50"
+                               (keyup.enter)="!exerciseChecked() && userAnswer().trim().length > 0 && checkAnswer()" />
+                      </div>
+                    }
+
+                    <!-- Speech Recording -->
+                    <div class="speech-recording-area flex flex-col items-center py-4 bg-white/5 border border-white/5 rounded-2xl p-6">
+                      @if (recordingState() === 'recording') {
+                        <div class="recording-visualizer flex items-center justify-center gap-1.5 mb-4 h-8">
+                          <span class="bar animate-pulse-bar-1"></span>
+                          <span class="bar animate-pulse-bar-2"></span>
+                          <span class="bar animate-pulse-bar-3"></span>
+                          <span class="bar animate-pulse-bar-4"></span>
+                        </div>
+                        <p class="text-red-400 text-sm font-semibold mb-1 animate-pulse flex items-center gap-1.5">
+                          🔴 Recording Speech (0:{{ recordingDuration() < 10 ? '0' : '' }}{{ recordingDuration() }})
+                        </p>
+                        @if (interimTranscript()) {
+                          <p class="text-indigo-200 text-xs italic mt-2 bg-slate-900/40 px-3 py-1.5 rounded-lg max-w-full text-center">
+                            "{{ interimTranscript() }}"
+                          </p>
+                        }
+                      } @else if (recordingState() === 'processing') {
+                        <div class="flex items-center gap-2 mb-3">
+                          <span class="spinner w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></span>
+                          <span class="text-indigo-300 text-sm font-medium">Whisper is analyzing pronunciation...</span>
+                        </div>
+                      } @else if (recordingState() === 'success') {
+                        <div class="w-full text-center">
+                          <div class="speech-captured-badge">
+                            ✓ Voice Assessment Captured
                           </div>
-                          <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden mb-3">
-                            <div class="h-full rounded-full transition-all duration-500"
-                                 [class]="exerciseAccuracyScore()! >= 75 ? 'bg-emerald-500' : 'bg-amber-500'"
-                                 [style.width.%]="exerciseAccuracyScore()">
+                          @if (exerciseSpeechTranscribed()) {
+                            <div class="bg-slate-900/50 rounded-xl p-4 mb-4 inline-block max-w-full">
+                              <p class="text-indigo-300 text-xs uppercase tracking-wider font-semibold mb-1">What you said:</p>
+                              <p class="text-white text-base font-medium italic">"{{ exerciseSpeechTranscribed() }}"</p>
                             </div>
-                          </div>
-
-                          <!-- Word alignment bubbles -->
-                          @if (exerciseWordsFeedback().length > 0) {
-                            <div class="flex flex-wrap gap-2 justify-center mt-3">
-                              @for (word of exerciseWordsFeedback(); track word.word) {
-                                <span class="word-bubble"
-                                      [class.word-bubble--correct]="word.status === 'correct'"
-                                      [class.word-bubble--unclear]="word.status === 'unclear'"
-                                      [class.word-bubble--incorrect]="word.status === 'incorrect'">
-                                  {{ word.word }}
+                          }
+                          <!-- Pronunciation Accuracy Details -->
+                          @if (exerciseAccuracyScore() !== null) {
+                            <div class="max-w-md mx-auto bg-slate-950/40 rounded-xl p-4 mb-4">
+                              <div class="flex justify-between items-center text-xs font-semibold text-indigo-300 mb-1.5">
+                                <span>PRONUNCIATION ACCURACY</span>
+                                <span [class]="exerciseAccuracyScore()! >= 75 ? 'text-emerald-400' : 'text-amber-400'">
+                                  {{ exerciseAccuracyScore() }}%
                                 </span>
+                              </div>
+                              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden mb-3">
+                                <div class="h-full rounded-full transition-all duration-500"
+                                     [class]="exerciseAccuracyScore()! >= 75 ? 'bg-emerald-500' : 'bg-amber-500'"
+                                     [style.width.%]="exerciseAccuracyScore()">
+                                </div>
+                              </div>
+                              <!-- Word alignment bubbles -->
+                              @if (exerciseWordsFeedback().length > 0) {
+                                <div class="flex flex-wrap gap-2 justify-center mt-3">
+                                  @for (word of exerciseWordsFeedback(); track word.word) {
+                                    <span class="word-bubble"
+                                          [class.word-bubble--correct]="word.status === 'correct'"
+                                          [class.word-bubble--unclear]="word.status === 'unclear'"
+                                          [class.word-bubble--incorrect]="word.status === 'incorrect'">
+                                      {{ word.word }}
+                                    </span>
+                                  }
+                                </div>
                               }
                             </div>
                           }
                         </div>
                       }
-                    </div>
-                  }
 
-                  <!-- Record Button Trigger -->
-                  @if (recordingState() !== 'processing' && !exerciseChecked()) {
-                    <button (click)="onRecordClick()" 
-                            [class.pulse-red-glow]="recordingState() === 'recording'"
-                            class="mic-trigger-btn flex items-center justify-center gap-2 mt-2 px-6 py-3 rounded-full font-semibold transition-all border">
-                      @if (recordingState() === 'recording') {
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 animate-pulse text-white">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z" />
-                        </svg>
-                        <span class="text-white">Stop and Grade Voice</span>
-                      } @else {
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 text-indigo-300">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-                        </svg>
-                        <span class="text-indigo-100">Practice Speaking</span>
+                      <!-- Record Button -->
+                      @if (recordingState() !== 'processing' && !exerciseChecked()) {
+                        <button (click)="onRecordClick()"
+                                [class.pulse-red-glow]="recordingState() === 'recording'"
+                                class="mic-trigger-btn flex items-center justify-center gap-2 mt-2 px-6 py-3 rounded-full font-semibold transition-all border">
+                          @if (recordingState() === 'recording') {
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 animate-pulse text-white">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z" />
+                            </svg>
+                            <span class="text-white">Stop and Grade Voice</span>
+                          } @else {
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 text-indigo-300">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                            </svg>
+                            <span class="text-indigo-100">Practice Speaking</span>
+                          }
+                        </button>
                       }
-                    </button>
-                  }
-                </div>
-              </div>
+                    </div>
+                  </div>
+                }
+              } <!-- end @switch -->
 
               <!-- Hint Slider Toggle -->
               @if (!exerciseChecked()) {
@@ -889,9 +1003,8 @@
                   <button (click)="showHint.set(!showHint())" class="text-sm font-semibold text-indigo-300 hover:text-white transition-colors flex items-center gap-1">
                     💡 {{ showHint() ? 'Ocultar Pista' : 'Mostrar Pista en Español' }}
                   </button>
-                  
                   @if (showHint()) {
-                    <div class="bg-indigo-950/60 border border-indigo-500/25 rounded-xl p-4 mt-3 text-indigo-200 text-sm leading-relaxed animate-fade-in">
+                    <div class="hint-panel animate-fade-in">
                       {{ activeExercise()!.hint }}
                     </div>
                   }
@@ -914,10 +1027,12 @@
                       <span style="font-size:1.25rem">⚠️</span>
                       <div style="flex:1">
                         <p class="title">Inténtalo de nuevo</p>
-                        <div class="correct-answer-box">
-                          <span style="display:block;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.25rem;color:#94a3b8;font-family:sans-serif">Respuesta Correcta:</span>
-                          {{ activeExercise()!.correct_answer }}
-                        </div>
+                        @if (activeExercise()!.type !== 'multiple_choice') {
+                          <div class="correct-answer-box">
+                            <span style="display:block;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.25rem;color:#94a3b8;font-family:sans-serif">Respuesta Correcta:</span>
+                            {{ activeExercise()!.correct_answer }}
+                          </div>
+                        }
                         <p class="subtitle">
                           <strong>Clave didáctica:</strong> {{ activeExercise()!.hint }}
                         </p>
@@ -932,20 +1047,20 @@
             <!-- Footer Actions -->
             <div class="wizard-footer pt-6 border-t border-white/10 flex items-center gap-3 justify-end">
               @if (!exerciseChecked()) {
-                <button (click)="checkAnswer()" 
-                        [disabled]="userAnswer().trim().length === 0"
+                <button (click)="checkAnswer()"
+                        [disabled]="activeExercise()!.type === 'multiple_choice' ? !selectedOption() : userAnswer().trim().length === 0"
                         class="btn btn--primary px-8 py-3 disabled:opacity-40 disabled:pointer-events-none">
-                  Submit Answer
+                  Comprobar respuesta
                 </button>
               } @else {
                 <button (click)="retryExercise()" class="btn btn--secondary px-6 py-3 flex items-center gap-2">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-slate-300">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                   </svg>
-                  <span>Try Again</span>
+                  <span>Intentar de nuevo</span>
                 </button>
                 <button (click)="nextExercise()" class="btn btn--success px-8 py-3">
-                  {{ currentExerciseIndex() + 1 === (practiceSession()?.exercises?.length || 5) ? 'Finish & Summary' : 'Next Exercise →' }}
+                  {{ currentExerciseIndex() + 1 === (practiceSession()?.exercises?.length || 5) ? 'Finalizar &amp; Ver Resultados' : 'Siguiente Ejercicio →' }}
                 </button>
               }
             </div>
