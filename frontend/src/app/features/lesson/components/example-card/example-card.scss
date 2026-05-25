@@ -624,3 +624,91 @@
   0% { opacity: 0.55; }
   100% { opacity: 1; }
 }
+
+// ─── Phase 4: AI Coach Feedback Bubble ────────────────────────────────────
+.coach-feedback-bubble {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.08);
+  animation: slide-down 0.3s ease-out;
+
+  &--error {
+    background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+    border-color: rgba(239, 68, 68, 0.3);
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.08);
+
+    .coach-feedback-bubble__label {
+      color: #b91c1c;
+      &::before {
+        content: '⚠️';
+      }
+    }
+    
+    .coach-feedback-bubble__content {
+      color: #9b2c2c;
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+  }
+
+  &__label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #0f766e;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+
+    &::before {
+      content: '🤖';
+      font-size: 1rem;
+    }
+  }
+
+  &__content {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #115e59;
+  }
+
+  &__text {
+    margin: 0;
+    white-space: pre-wrap;
+  }
+}
+
+// ─── Typing Indicator ──────────────────────────────────────────────────────
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  height: 1.5rem;
+
+  span {
+    display: block;
+    width: 6px;
+    height: 6px;
+    background-color: #0d9488;
+    border-radius: 50%;
+    animation: typing-dot 1.4s infinite ease-in-out both;
+
+    &:nth-child(1) { animation-delay: -0.32s; }
+    &:nth-child(2) { animation-delay: -0.16s; }
+    &:nth-child(3) { animation-delay: 0s; }
+  }
+}
+
+@keyframes typing-dot {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}

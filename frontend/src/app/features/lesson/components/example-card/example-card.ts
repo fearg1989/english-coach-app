@@ -32,6 +32,10 @@ export class ExampleCardComponent implements OnDestroy {
   readonly errorMessage = signal<string | null>(null);
   readonly recordingDuration = signal<number>(0);
 
+  // --- Phase 4 AI Coach State ---
+  readonly coachState = signal<'idle' | 'loading' | 'streaming' | 'done' | 'error'>('idle');
+  readonly coachFeedbackText = signal<string>('');
+
   // --- Streaming Speech-to-Text State ---
   private socket: WebSocket | null = null;
   readonly interimTranscript = signal<string>('');
@@ -362,7 +366,83 @@ export class ExampleCardComponent implements OnDestroy {
     this.recordingDuration.set(0);
     this.audioChunks = [];
     this.interimTranscript.set('');
+    this.coachState.set('idle');
+    this.coachFeedbackText.set('');
     this.cleanupSocket();
+  }
+
+  async askCoach(): Promise<void> {
+    const result = this.evaluationResult();
+    if (!result) return;
+
+    this.coachState.set('loading');
+    this.coachFeedbackText.set('');
+
+    try {
+      const response = await fetch(`${environment.apiUrl}/coach/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          target_phrase: this.example.phrase,
+          user_transcription: result.transcribed_text,
+          score: result.accuracy_score,
+        }),
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error('Network response was not ok');
+      }
+
+      this.coachState.set('streaming');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        
+        // Keep the last incomplete chunk in the buffer
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.substring(6);
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.error) {
+                this.coachFeedbackText.set(data.error);
+                this.coachState.set('error');
+                await reader.cancel();
+                return;
+              }
+              if (data.done) {
+                this.coachState.set('done');
+                await reader.cancel();
+                return;
+              }
+              if (data.content) {
+                this.coachFeedbackText.update((text) => text + data.content);
+              }
+            } catch (e) {
+              console.error('Error parsing SSE data:', e);
+            }
+          }
+        }
+      }
+      if (this.coachState() === 'streaming') {
+        this.coachState.set('done');
+      }
+    } catch (err) {
+      console.error('Ask Coach Error:', err);
+      this.coachState.set('error');
+    }
   }
 
   ngOnDestroy(): void {

@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     # ─── Speech To Text ──────────────────────────────────────────────────────
     WHISPER_MODEL: str = "small"
 
+    # ─── AI Coach (Ollama) ───────────────────────────────────────────────────
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "gemma4:31b-cloud"
+
     @property
     def DATABASE_URL(self) -> str:
         return (
