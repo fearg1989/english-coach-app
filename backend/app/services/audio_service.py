@@ -47,7 +47,7 @@ class AudioService:
                     logger.info(f"Whisper model '{model_name}' loaded successfully")
         return self._model
 
-    def transcribe_audio(self, file_bytes: bytes) -> str:
+    def transcribe_audio(self, file_bytes: bytes) -> dict:
         """
         Saves incoming audio bytes, normalizes the format using pydub, transcribes using Whisper,
         and cleans up temporary files safely.
@@ -76,12 +76,40 @@ class AudioService:
             # Load model and transcribe
             model = self.get_model()
             logger.debug("Running Whisper transcription...")
-            # We explicitly specify language='en' to speed up inference and prevent language hallucination
-            result = model.transcribe(temp_wav_path, language="en")
+            # We explicitly specify language='en' to speed up inference and prevent language hallucination.
+            # We tune parameters to avoid auto-correcting non-native accents and get word-level info.
+            result = model.transcribe(
+                temp_wav_path,
+                language="en",
+                temperature=0.0,
+                condition_on_previous_text=False,
+                initial_prompt=(
+                    "This is a literal transcription of English speech spoken with a strong Hispanic / Spanish accent. "
+                    "Transcribe exactly what is spoken, word-for-word, including any mispronunciations, "
+                    "phonetical variations, slurred words, or mistakes. Do not correct grammar or spelling."
+                ),
+                word_timestamps=True
+            )
             transcribed_text = result.get("text", "").strip()
             
+            # Extract word-level details
+            words = []
+            for segment in result.get("segments", []):
+                for w in segment.get("words", []):
+                    word_text = w.get("word", "").strip()
+                    if word_text:
+                        words.append({
+                            "word": word_text,
+                            "start": w.get("start", 0.0),
+                            "end": w.get("end", 0.0),
+                            "probability": w.get("probability", 1.0)
+                        })
+            
             logger.info(f"Successfully transcribed audio: '{transcribed_text}'")
-            return transcribed_text
+            return {
+                "transcribed_text": transcribed_text,
+                "words": words
+            }
 
         finally:
             # Safely close file descriptors and delete temp files
@@ -97,6 +125,47 @@ class AudioService:
                         logger.debug(f"Cleaned up temporary file: {path}")
                     except Exception as clean_err:
                         logger.warning(f"Failed to clean up temporary file {path}: {clean_err}")
+
+    def transcribe_audio_interim(self, file_bytes: bytes) -> str:
+        """
+        Runs a highly optimized, fast transcription for real-time interim updates
+        without word timestamps or deep alignment analysis.
+        """
+        temp_in_fd, temp_in_path = tempfile.mkstemp()
+        temp_wav_fd, temp_wav_path = tempfile.mkstemp(suffix=".wav")
+        
+        try:
+            with os.fdopen(temp_in_fd, "wb") as f:
+                f.write(file_bytes)
+                
+            try:
+                audio = AudioSegment.from_file(temp_in_path)
+                audio = audio.set_frame_rate(16000).set_channels(1).set_sample_width(2)
+                audio.export(temp_wav_path, format="wav")
+            except Exception as audio_err:
+                logger.error(f"Interim normalization failed: {audio_err}")
+                return ""
+                
+            model = self.get_model()
+            result = model.transcribe(
+                temp_wav_path,
+                language="en",
+                temperature=0.0,
+                word_timestamps=False
+            )
+            return result.get("text", "").strip()
+            
+        finally:
+            try:
+                os.close(temp_wav_fd)
+            except OSError:
+                pass
+            for path in (temp_in_path, temp_wav_path):
+                if os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except Exception:
+                        pass
 
     def calculate_accuracy(self, transcribed_text: str, target_text: str) -> float:
         """
@@ -186,6 +255,100 @@ class AudioService:
         text = " ".join(text.split())
         
         return text
+
+    def _normalize_token(self, token: str) -> str:
+        """
+        Lowercases a token and strips all non-alphanumeric characters.
+        Keeps contractions as single words without expansion for exact token comparison.
+        """
+        if not token:
+            return ""
+        return re.sub(r"[^\w]", "", token.lower())
+
+    def align_words(self, target_text: str, transcribed_words: list[dict]) -> list[dict]:
+        """
+        Aligns words from target_text with words transcribed by Whisper, using SequenceMatcher.
+        For each word in target_text, we determine if it was pronounced correctly (green),
+        unclearly (orange/yellow), or incorrectly/missed (red) based on text match and Whisper's confidence.
+        """
+        target_tokens = target_text.split()
+        normalized_targets = [self._normalize_token(t) for t in target_tokens]
+        normalized_transcribed = [self._normalize_token(w["word"]) for w in transcribed_words]
+        
+        # Initialize feedback array
+        feedback = [None] * len(target_tokens)
+        
+        matcher = SequenceMatcher(None, normalized_targets, normalized_transcribed)
+        opcodes = matcher.get_opcodes()
+        
+        for tag, i1, i2, j1, j2 in opcodes:
+            if tag == "equal":
+                # 1-to-1 match
+                for offset in range(i2 - i1):
+                    t_idx = i1 + offset
+                    w_idx = j1 + offset
+                    
+                    target_word = target_tokens[t_idx]
+                    trans_word_dict = transcribed_words[w_idx]
+                    prob = trans_word_dict.get("probability", 1.0)
+                    
+                    if prob >= 0.80:
+                        status = "correct"
+                    elif prob >= 0.40:
+                        status = "unclear"
+                    else:
+                        status = "incorrect"
+                        
+                    feedback[t_idx] = {
+                        "word": target_word,
+                        "status": status,
+                        "accuracy_score": round(prob * 100, 1),
+                        "transcribed_as": trans_word_dict.get("word")
+                    }
+            elif tag == "replace":
+                # Substitution
+                target_len = i2 - i1
+                trans_len = j2 - j1
+                
+                for offset in range(target_len):
+                    t_idx = i1 + offset
+                    target_word = target_tokens[t_idx]
+                    
+                    if offset < trans_len:
+                        trans_word_dict = transcribed_words[j1 + offset]
+                        transcribed_as = trans_word_dict.get("word")
+                        prob = trans_word_dict.get("probability", 0.0)
+                    else:
+                        transcribed_as = None
+                        prob = 0.0
+                        
+                    feedback[t_idx] = {
+                        "word": target_word,
+                        "status": "incorrect",
+                        "accuracy_score": round(prob * 100, 1) if transcribed_as else 0.0,
+                        "transcribed_as": transcribed_as
+                    }
+            elif tag == "delete":
+                # Omission
+                for t_idx in range(i1, i2):
+                    feedback[t_idx] = {
+                        "word": target_tokens[t_idx],
+                        "status": "incorrect",
+                        "accuracy_score": 0.0,
+                        "transcribed_as": None
+                    }
+                    
+        # Fill any remaining unassigned slots with safe defaults
+        for idx in range(len(feedback)):
+            if feedback[idx] is None:
+                feedback[idx] = {
+                    "word": target_tokens[idx],
+                    "status": "incorrect",
+                    "accuracy_score": 0.0,
+                    "transcribed_as": None
+                }
+                
+        return feedback
 
 # Export a single thread-safe instance
 audio_service = AudioService()

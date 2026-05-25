@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:4200"]
 
     # ─── Speech To Text ──────────────────────────────────────────────────────
-    WHISPER_MODEL: str = "base.en"
+    WHISPER_MODEL: str = "small"
 
     @property
     def DATABASE_URL(self) -> str:

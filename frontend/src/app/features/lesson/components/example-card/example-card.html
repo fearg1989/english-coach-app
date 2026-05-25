@@ -75,6 +75,16 @@
       <p class="example-card__translation" lang="es">{{ example.translation }}</p>
     </div>
 
+    <!-- Real-Time Streaming Transcription Bubble -->
+    @if (recordingState() === 'recording') {
+      <div class="realtime-bubble" aria-live="polite">
+        <span class="realtime-bubble__label">Escuchando en tiempo real:</span>
+        <p class="realtime-bubble__text" [class.realtime-bubble__text--listening]="!interimTranscript()">
+          {{ interimTranscript() ? '"' + interimTranscript() + '"' : 'Habla ahora...' }}
+        </p>
+      </div>
+    }
+
     <!-- Phase 3 Pronunciation Result Panel -->
     @if (recordingState() === 'success' && evaluationResult()) {
       <div class="pronunciation-result"
@@ -111,10 +121,24 @@
               </p>
             </div>
             <div class="comparison-block">
-              <span class="comparison-block__label">Frase objetivo:</span>
-              <p class="comparison-block__text text-indigo-900 font-semibold">
-                "{{ example.phrase }}"
-              </p>
+              <span class="comparison-block__label">Frase objetivo (retroalimentación por palabra):</span>
+              <div class="word-feedback-list">
+                @for (item of evaluationResult()!.words; track $index) {
+                  <span class="word-badge"
+                        [class.word-badge--correct]="item.status === 'correct'"
+                        [class.word-badge--unclear]="item.status === 'unclear'"
+                        [class.word-badge--incorrect]="item.status === 'incorrect'"
+                        [title]="item.status === 'incorrect' && item.transcribed_as ? 'Pronunciado como: ' + item.transcribed_as : (item.status === 'unclear' ? 'Pronunciación poco clara (' + item.accuracy_score + '%)' : 'Pronunciación correcta (' + item.accuracy_score + '%)')"
+                  >
+                    <span class="word-badge__original">{{ item.word }}</span>
+                    @if (item.status === 'incorrect' && item.transcribed_as) {
+                      <span class="word-badge__transcription" aria-label="Escuchado como">
+                        ({{ item.transcribed_as }})
+                      </span>
+                    }
+                  </span>
+                }
+              </div>
             </div>
           </div>
           

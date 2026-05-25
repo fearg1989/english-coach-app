@@ -3,6 +3,7 @@ import { Component, Input, inject, computed, signal, OnDestroy } from '@angular/
 import { Example } from '../../../../core/models/lesson.model';
 import { SpeechService } from '../../../../core/services/speech.service';
 import { ApiService } from '../../../../core/services/api.service';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-example-card',
@@ -18,9 +19,22 @@ export class ExampleCardComponent implements OnDestroy {
 
   // --- Phase 3 Pronunciation Assessment State ---
   readonly recordingState = signal<'idle' | 'recording' | 'processing' | 'success' | 'error'>('idle');
-  readonly evaluationResult = signal<{ transcribed_text: string; accuracy_score: number } | null>(null);
+  readonly evaluationResult = signal<{
+    transcribed_text: string;
+    accuracy_score: number;
+    words: Array<{
+      word: string;
+      status: 'correct' | 'unclear' | 'incorrect';
+      accuracy_score: number;
+      transcribed_as: string | null;
+    }>;
+  } | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly recordingDuration = signal<number>(0);
+
+  // --- Streaming Speech-to-Text State ---
+  private socket: WebSocket | null = null;
+  readonly interimTranscript = signal<string>('');
 
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
@@ -216,6 +230,7 @@ export class ExampleCardComponent implements OnDestroy {
     this.evaluationResult.set(null);
     this.errorMessage.set(null);
     this.recordingDuration.set(0);
+    this.interimTranscript.set('');
     this.audioChunks = [];
 
     if (typeof window === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -224,39 +239,87 @@ export class ExampleCardComponent implements OnDestroy {
       return;
     }
 
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then((stream) => {
-        this.mediaRecorder = new MediaRecorder(stream);
-        this.mediaRecorder.ondataavailable = (event) => {
-          if (event.data && event.data.size > 0) {
-            this.audioChunks.push(event.data);
-          }
-        };
+    // Connect to the streaming websocket
+    const target = encodeURIComponent(this.example.phrase);
+    
+    let apiBase = environment.apiUrl;
+    if (apiBase.startsWith('/')) {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      apiBase = `${protocol}//${window.location.host}${apiBase}`;
+    } else {
+      apiBase = apiBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+    }
+    
+    const wsUrl = `${apiBase}/audio/stream-evaluation?target_text=${target}`;
+    this.socket = new WebSocket(wsUrl);
 
-        this.mediaRecorder.onstop = () => {
-          // Compile standard webm/ogg format chunks into a single Blob
-          const mimeType = this.mediaRecorder?.mimeType || 'audio/webm';
-          const audioBlob = new Blob(this.audioChunks, { type: mimeType });
-          this.sendAudioToBackend(audioBlob);
-        };
+    this.socket.onopen = () => {
+      console.log('WebSocket streaming connection opened');
+      
+      // Start microphone capture and media recording once websocket is open
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((stream) => {
+          this.mediaRecorder = new MediaRecorder(stream);
+          this.mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+              this.audioChunks.push(event.data);
+              
+              // Stream raw chunk directly to WebSocket
+              if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+                this.socket.send(event.data);
+              }
+            }
+          };
 
-        // Start recording
-        this.mediaRecorder.start();
+          // Start recording with timeslice of 1000ms (sends data chunk every 1 second)
+          this.mediaRecorder.start(1000);
 
-        // Start timer
-        this.timerInterval = setInterval(() => {
-          this.recordingDuration.update((d) => d + 1);
-          // Safety timeout of 15 seconds to prevent extremely large uploads
-          if (this.recordingDuration() >= 15) {
-            this.stopRecording();
-          }
-        }, 1000);
-      })
-      .catch((err) => {
-        console.error('Error accessing microphone:', err);
-        this.errorMessage.set('Acceso al micrófono denegado. Por favor, activa los permisos en tu navegador.');
-        this.recordingState.set('error');
-      });
+          // Start visual timer
+          this.timerInterval = setInterval(() => {
+            this.recordingDuration.update((d) => d + 1);
+            if (this.recordingDuration() >= 15) {
+              this.stopRecording();
+            }
+          }, 1000);
+        })
+        .catch((err) => {
+          console.error('Error accessing microphone:', err);
+          this.errorMessage.set('Acceso al micrófono denegado. Por favor, activa los permisos en tu navegador.');
+          this.recordingState.set('error');
+          this.cleanupSocket();
+        });
+    };
+
+    this.socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'interim') {
+          this.interimTranscript.set(data.text);
+        } else if (data.type === 'final') {
+          this.evaluationResult.set(data);
+          this.recordingState.set('success');
+          this.cleanupSocket();
+        } else if (data.type === 'error') {
+          this.errorMessage.set(data.detail || 'Error en el procesamiento del flujo.');
+          this.recordingState.set('error');
+          this.cleanupSocket();
+        }
+      } catch (err) {
+        console.error('Error parsing streaming websocket data:', err);
+      }
+    };
+
+    this.socket.onerror = (err) => {
+      console.error('WebSocket connection error:', err);
+      this.errorMessage.set('Error en la conexión en tiempo real con el servidor de voz.');
+      this.recordingState.set('error');
+      this.stopRecording();
+      this.cleanupSocket();
+    };
+
+    this.socket.onclose = () => {
+      console.log('WebSocket streaming connection closed');
+    };
   }
 
   private stopRecording(): void {
@@ -267,37 +330,29 @@ export class ExampleCardComponent implements OnDestroy {
 
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
-      // Explicitly stop all audio tracks of the stream to turn off microphone usage lights in the browser
       if (this.mediaRecorder.stream) {
         this.mediaRecorder.stream.getTracks().forEach((track) => track.stop());
       }
     }
+
+    // Set state to processing while waiting for the final evaluation
+    if (this.recordingState() === 'recording') {
+      this.recordingState.set('processing');
+    }
+
+    // Inform the backend that we stopped speaking
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify({ event: 'stop' }));
+    }
   }
 
-  private sendAudioToBackend(audioBlob: Blob): void {
-    this.recordingState.set('processing');
-
-    const formData = new FormData();
-    // Append the file and specify file name (FastAPI audio endpoint expects standard multipart)
-    formData.append('file', audioBlob, 'recording.webm');
-    formData.append('target_text', this.example.phrase);
-
-    this.apiService.post<{ transcribed_text: string; accuracy_score: number }>('/audio/evaluate-pronunciation', formData)
-      .subscribe({
-        next: (res) => {
-          this.evaluationResult.set(res);
-          this.recordingState.set('success');
-        },
-        error: (err) => {
-          console.error('Pronunciation evaluation failed:', err);
-          let detail = 'Error de conexión con el servidor de evaluación. Verifica tu conexión de red.';
-          if (err.error && err.error.detail) {
-            detail = err.error.detail;
-          }
-          this.errorMessage.set(detail);
-          this.recordingState.set('error');
-        }
-      });
+  private cleanupSocket(): void {
+    if (this.socket) {
+      try {
+        this.socket.close();
+      } catch (e) {}
+      this.socket = null;
+    }
   }
 
   resetState(): void {
@@ -306,6 +361,8 @@ export class ExampleCardComponent implements OnDestroy {
     this.errorMessage.set(null);
     this.recordingDuration.set(0);
     this.audioChunks = [];
+    this.interimTranscript.set('');
+    this.cleanupSocket();
   }
 
   ngOnDestroy(): void {
@@ -318,5 +375,6 @@ export class ExampleCardComponent implements OnDestroy {
         this.mediaRecorder.stream.getTracks().forEach((track) => track.stop());
       }
     }
+    this.cleanupSocket();
   }
 }
